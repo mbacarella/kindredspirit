@@ -2,7 +2,6 @@ open! Core.Std
 open! Async.Std
 
 let main () =
-  don't_wait_for (Pixel_pusher.update_loop 128);
   Pixel_pusher.start_discovery_listener ()
 
 let () =
