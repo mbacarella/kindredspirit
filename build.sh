@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SRCS=kindredspirit.ml
+SRCS=pixel_pusher.ml
 
 ocamlbuild \
     -r \
@@ -21,4 +21,4 @@ ocamlbuild \
     -tag short_paths \
     -cflags "-w A-4-33-40-41-42-43-34-44" \
     -cflags -strict-sequence \
-    $SRCS kindredspirit.native
+    $SRCS pixel_pusher.native
