@@ -182,7 +182,7 @@ let send_pixels_to_pushers socket =
       buf.[2] <- char ((seq lsr  8) land 0xFF);
       buf.[3] <- char (seq land 0xFF);
       List.iteri strips ~f:(fun strip_index strip_num ->
-	let strip_base = 4 + strip_index*pixels_per_strip*3 in
+	let strip_base = 4 + strip_index*(1+pixels_per_strip*3) in
 	buf.[strip_base] <- char strip_num;
 	let pixels_base = strip_base+1 in
 	for pixel_num=0 to pixels_per_strip-1; do
@@ -213,7 +213,7 @@ let rec update_loop i =
     ~finally:(Core.Std.Unix.close ~restart:true)
     ~f:send_pixels_to_pushers;
   Clock.after (Time.Span.of_ms 100.)
-  >>= fun () -> update_loop (i+1)
+  >>= fun () -> update_loop ((i+1) mod 256)
 
 let main () =
   don't_wait_for (update_loop 128);
