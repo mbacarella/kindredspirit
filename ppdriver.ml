@@ -2,7 +2,7 @@ open! Core.Std
 open! Async.Std
 
 let discovery_port = 7331
-let command_port = 5078
+let command_port = 9897
 
 module Beacon = struct
   module Strip_info = struct
@@ -42,6 +42,7 @@ module Beacon = struct
       ; delta_sequence : int (* diff between received and expected sequence numbers *)
       ; controller_ordinal : int
       ; group_ordinal : int
+      ; my_port : int
       ; strip_info : Strip_info.t Array.t
       ; protected : bool (* require qualified registry.getStrips() call (???) *)
       ; fixed_size : bool (* requires every datagram same size *)
@@ -72,7 +73,7 @@ module Beacon = struct
 	; group_ordinal : 32 : littleendian
 	; _artnet_universe : 16 : littleendian
 	; _artnet_channel : 16 : littleendian
-	; _my_port : 16 : littleendian
+	; my_port : 16 : littleendian
 	; strip_info : 64 : bitstring
 	; _padding : 16
 	; protected : 1
@@ -105,7 +106,7 @@ module Beacon = struct
 	; hw_revision ; sw_revision ; link_speed = to_int link_speed ; strips_attached ; max_strips_per_packet
 	; pixels_per_strip ; update_period = to_int update_period ; power_total = to_int power_total
 	; delta_sequence = to_int delta_sequence ; controller_ordinal = to_int controller_ordinal 
-	; group_ordinal = to_int group_ordinal; strip_info; protected; fixed_size
+	; group_ordinal = to_int group_ordinal; my_port; strip_info; protected; fixed_size
 	; last_driven_ip; last_driven_port }
 end
 
@@ -136,6 +137,9 @@ let start_discovery_listener () =
       let addr_s = Async_extra.Import.Socket.Address.Inet.to_string addr in
       let beacon = Iobuf.to_string buf |> Beacon.of_wire in
       let key = beacon.Beacon.ip_address in
+      let my_port = beacon.Beacon.my_port in
+      if my_port <> command_port then
+	failwithf "*** PP %s's command port is %d, not %d" key my_port command_port ();
       let num_pixels = Beacon.(beacon.pixels_per_strip * beacon.strips_attached) in
       match Hashtbl.find known_pushers key with
 	| Some state ->
@@ -190,6 +194,7 @@ let send_pixels_to_pushers socket =
       assert ((List.length strips) <= max_strips_per_packet);
       let bytes_to_send = packet_size (List.length strips) in
       let bytes_sent =
+	printf "*** Sending %d byte packet to %s:%d\n" bytes_to_send ip command_port;
 	Core.Std.Unix.sendto socket ~buf ~pos:0 ~len:bytes_to_send ~mode:[] ~addr
       in
       if bytes_sent < bytes_to_send then
