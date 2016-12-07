@@ -8,7 +8,9 @@
 
   This module listens for Pixel Pushers to announce themselves, remembers
   them, and provides an interface for sending color commands to pixels on
-  strips. *)  
+    strips. *)
+
+open Core.Std
 open Async.Std
   
 module Pixel : sig
@@ -20,7 +22,8 @@ module Strip : sig
       { strip_number: int
       ; strip_length : int
       ; controller_id : int
-      ; group_id : int }
+      ; group_id : int
+      ; matrix : Pixel.t Array.t }
   val set_pixel : t -> color:Pixel.t -> index:int -> unit
 end
 

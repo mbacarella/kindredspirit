@@ -119,18 +119,44 @@ module Pixel = struct
   let _white = { red = 255; green = 255; blue = 255 }
 end
 
+module Strip = struct
+  type t =
+      { strip_number: int
+      ; strip_length : int
+      ; controller_id : int
+      ; group_id : int
+      ; matrix : Pixel.t Array.t }
+  let set_pixel t ~color ~index =
+    ignore color;
+    ignore index;
+    ignore t;
+    failwithf "implement me" ()
+end
+  
 module Pusher_state = struct
   type t =
       { beacon_time : Time.t
       ; beacon      : Beacon.t
       ; mutable seq : int 
       ; matrix      : Pixel.t Array.t }
+  let known_pushers = String.Table.create ()
+  let strips = ref []
+  let update () =
+    let strips' =
+      Hashtbl.fold known_pushers ~init:[] ~f:(fun ~key:_ ~data acc ->
+	let beacon = data.beacon in
+	List.fold_left (List.range 0 beacon.Beacon.strips_attached) ~init:acc ~f:(fun acc i ->
+	  { Strip.strip_number = i
+	  ; strip_length = beacon.Beacon.pixels_per_strip
+	  ; controller_id = beacon.Beacon.controller_ordinal
+	  ; group_id = beacon.Beacon.group_ordinal
+	  ; matrix = data.matrix } :: acc))
+    in
+    strips := strips'
 end
-  
-let known_pushers = String.Table.create ()
 
 let send_pixels_to_pushers socket =
-  Hashtbl.iter known_pushers ~f:(fun ~key:ip ~data:pusher ->
+  Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:ip ~data:pusher ->
     let beacon = pusher.Pusher_state.beacon in
     let addr = Unix.ADDR_INET (Unix.Inet_addr.of_string ip, command_port) in
     let pixels_per_strip = beacon.Beacon.pixels_per_strip in
@@ -178,7 +204,7 @@ let send_pixels_to_pushers socket =
 let rec update_loop i =
   let ri () = Random.int 256 in
   let pixel = { Pixel.red = (ri ()); green = (ri ()); blue = (ri ()) } in
-  Hashtbl.iter known_pushers ~f:(fun ~key:_ ~data:pusher ->
+  Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:_ ~data:pusher ->
     let matrix = pusher.Pusher_state.matrix in
     for i=0 to Array.length matrix - 1; do
       matrix.(i) <- pixel
@@ -189,28 +215,8 @@ let rec update_loop i =
   Clock.after (Time.Span.of_ms 100.)
   >>= fun () -> update_loop ((i+10) mod 256)
 
-module Strip = struct
-  type t =
-      { strip_number: int
-      ; strip_length : int
-      ; controller_id : int
-      ; group_id : int }
-  let set_pixel t ~color ~index =
-    ignore color;
-    ignore index;
-    ignore t
-end
-  
 let get_strips () =
-  (* XXX: add some caching *)
-  Hashtbl.fold known_pushers ~init:[] ~f:(fun ~key:_ ~data acc ->
-    let beacon = data.Pusher_state.beacon in
-    List.fold_left (List.range 0 beacon.Beacon.strips_attached) ~init:acc ~f:(fun acc i ->
-      { Strip.strip_number = i
-      ; strip_length = beacon.Beacon.pixels_per_strip
-      ; controller_id = beacon.Beacon.controller_ordinal
-      ; group_id = beacon.Beacon.group_ordinal } :: acc))
-	  
+  !Pusher_state.strips
 
 let start_discovery_listener () =
   don't_wait_for (update_loop 128);
@@ -228,17 +234,16 @@ let start_discovery_listener () =
       if my_port <> command_port then
 	failwithf "*** PP %s's command port is %d, not %d" key my_port command_port ();
       let num_pixels = Beacon.(beacon.pixels_per_strip * beacon.strips_attached) in
-      match Hashtbl.find known_pushers key with
+      match Hashtbl.find Pusher_state.known_pushers key with
 	| Some state ->
 	  let mlen = Array.length state.Pusher_state.matrix in
 	  if mlen <> num_pixels then
 	    failwithf "*** PP %s's dimensions changed from %d to %d pixels" key mlen num_pixels ();
 	  let data = { state with Pusher_state.beacon_time = Time.now (); beacon } in
-	  Hashtbl.replace known_pushers ~key ~data
+	  Hashtbl.replace Pusher_state.known_pushers ~key ~data
 	| None ->
 	  printf "*** Discovered new Pixel Pusher: %s\n" addr_s;
 	  printf "%s\n" (Beacon.sexp_of_t beacon |> Sexp.to_string_hum ~indent:2);
 	  let matrix = Array.init num_pixels ~f:(fun _ -> Pixel.black) in
-	  Hashtbl.add_exn known_pushers ~key ~data:{
-	      Pusher_state.beacon_time = Time.now ()
-	    ; beacon; seq = 0; matrix })
+	  Hashtbl.add_exn Pusher_state.known_pushers ~key ~data:{ Pusher_state.beacon_time = Time.now (); beacon; seq = 0; matrix };
+	  Pusher_state.update ())
