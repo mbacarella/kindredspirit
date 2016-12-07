@@ -113,10 +113,10 @@ module Beacon = struct
 	; last_driven_ip; last_driven_port }
 end
 
-module Pixel = struct
-  type t = { red : int; green: int; blue: int }
-  let black = { red = 0; green = 0; blue = 0 }
-  let _white = { red = 255; green = 255; blue = 255 }
+module Color = struct
+  type t = { r: int; g: int; b: int }
+  let black = { r=0; g=0; b=0 }
+  let _white = { r=255; g=255; b=255 }
 end
 
 module Strip = struct
@@ -125,12 +125,9 @@ module Strip = struct
       ; strip_length : int
       ; controller_id : int
       ; group_id : int
-      ; matrix : Pixel.t Array.t }
+      ; matrix : Color.t Array.t }
   let set_pixel t ~color ~index =
-    ignore color;
-    ignore index;
-    ignore t;
-    failwithf "implement me" ()
+    matrix.(strip_number*strip_length + index) <- color
 end
   
 module Pusher_state = struct
@@ -138,7 +135,7 @@ module Pusher_state = struct
       { beacon_time : Time.t
       ; beacon      : Beacon.t
       ; mutable seq : int 
-      ; matrix      : Pixel.t Array.t }
+      ; matrix      : Color.t Array.t }
   let known_pushers = String.Table.create ()
   let strips = ref []
   let update () =
@@ -186,9 +183,9 @@ let send_pixels_to_pushers socket =
 	let pixels_base = strip_base+1 in
 	for pixel_num=0 to pixels_per_strip-1; do
 	  let pixel = matrix.(strip_num*pixels_per_strip + pixel_num) in
-	  buf.[pixels_base + pixel_num*3    ] <- char pixel.red;
-	  buf.[pixels_base + pixel_num*3 + 1] <- char pixel.green;
-	  buf.[pixels_base + pixel_num*3 + 2] <- char pixel.blue
+	  buf.[pixels_base + pixel_num*3    ] <- char pixel.r;
+	  buf.[pixels_base + pixel_num*3 + 1] <- char pixel.g;
+	  buf.[pixels_base + pixel_num*3 + 2] <- char pixel.b
 	done);
       assert ((List.length strips) <= max_strips_per_packet);
       let bytes_to_send = packet_size (List.length strips) in
@@ -203,7 +200,7 @@ let send_pixels_to_pushers socket =
 
 let rec update_loop i =
   let ri () = Random.int 256 in
-  let pixel = { Pixel.red = (ri ()); green = (ri ()); blue = (ri ()) } in
+  let pixel = { Color.r = (ri ()); g = (ri ()); b = (ri ()) } in
   Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:_ ~data:pusher ->
     let matrix = pusher.Pusher_state.matrix in
     for i=0 to Array.length matrix - 1; do
@@ -244,6 +241,6 @@ let start_discovery_listener () =
 	| None ->
 	  printf "*** Discovered new Pixel Pusher: %s\n" addr_s;
 	  printf "%s\n" (Beacon.sexp_of_t beacon |> Sexp.to_string_hum ~indent:2);
-	  let matrix = Array.init num_pixels ~f:(fun _ -> Pixel.black) in
+	  let matrix = Array.init num_pixels ~f:(fun _ -> Color.black) in
 	  Hashtbl.add_exn Pusher_state.known_pushers ~key ~data:{ Pusher_state.beacon_time = Time.now (); beacon; seq = 0; matrix };
 	  Pusher_state.update ())

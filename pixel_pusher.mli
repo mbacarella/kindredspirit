@@ -3,18 +3,19 @@
   Pixel Pushers are devices that sit on IP networks that can be sent
   commands over UDP to control LEDs and other kinds of lighting hardware.
 
-  Each Pixel Pusher can have up to eight "strips" connected, and each strip
-  can have up to N pixels.
+  Each Pixel Pusher can have up to eight LED "strips" connected, and each strip
+  can have up to N pixels (global to each Pixel Pusher).
 
   This module listens for Pixel Pushers to announce themselves, remembers
-  them, and provides an interface for sending color commands to pixels on
-    strips. *)
+  them, and provides an interface for telling a pixel on a strip
+  to turn to a color.
+*)
 
 open Core.Std
 open Async.Std
   
-module Pixel : sig
-  type t = { red: int; green: int; blue: int }
+module Color : sig
+  type t = { r: int; g: int; b: int }
 end
   
 module Strip : sig
@@ -24,7 +25,7 @@ module Strip : sig
       ; controller_id : int
       ; group_id : int
       ; matrix : Pixel.t Array.t }
-  val set_pixel : t -> color:Pixel.t -> index:int -> unit
+  val set_pixel : t -> color:Color.t -> index:int -> unit
 end
 
 (* Returns all strips seen by the subsystem. *)
