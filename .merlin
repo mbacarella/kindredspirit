@@ -1,4 +1,4 @@
 kindredspirit
 pixel_pusher
-PKG core core_extended async bitstring sexplib
+PKG core core_extended async bitstring sexplib lablgl lablgl.glut fftw3
 EXT bitstring sexplib

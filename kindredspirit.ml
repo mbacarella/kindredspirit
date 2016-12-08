@@ -1,7 +1,33 @@
 open! Core.Std
 open! Async.Std
 
+let reshape ~w ~h =
+  printf "*** resize window to %dx%d\n" w h;
+  GlDraw.viewport ~x:0 ~y:0 ~w ~h
+
+let display () =
+  GlClear.clear [`color];
+  Gl.flush ();
+  Glut.swapBuffers ()
+
+let key_input ~key ~x:_ ~y:_ =
+  match Char.of_int key with
+  | None -> printf "wat (key code: %d)\n" key
+  | Some char ->
+    printf "*** key input: %c\n" char
+
+let gl_main () =
+  let _ = Glut.init ~argv:Sys.argv in
+  Glut.initDisplayMode ~depth:true ~double_buffer:true ();
+  let _ = Glut.createWindow ~title:"Kindred Spirit Lighting Console" in
+  Glut.reshapeFunc ~cb:reshape;
+  Glut.displayFunc ~cb:display;
+  Glut.idleFunc ~cb:(Some Glut.postRedisplay);
+  Glut.keyboardFunc ~cb:key_input;
+  Glut.mainLoop ()
+  
 let main () =
+  don't_wait_for (In_thread.run gl_main);
   Pixel_pusher.start_discovery_listener ()
 
 let () =
