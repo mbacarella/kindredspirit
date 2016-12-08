@@ -24,7 +24,7 @@ module Strip : sig
       ; strip_length : int
       ; controller_id : int
       ; group_id : int
-      ; matrix : Pixel.t Array.t }
+      ; matrix : Color.t Array.t }
   val set_pixel : t -> color:Color.t -> index:int -> unit
 end
 

@@ -127,7 +127,7 @@ module Strip = struct
       ; group_id : int
       ; matrix : Color.t Array.t }
   let set_pixel t ~color ~index =
-    matrix.(strip_number*strip_length + index) <- color
+   t.matrix.(t.strip_number * t.strip_length + index) <- color
 end
   
 module Pusher_state = struct

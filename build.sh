@@ -13,6 +13,9 @@ ocamlbuild \
     -pkg sexplib.syntax \
     -pkg bitstring \
     -pkg bitstring.syntax \
+    -pkg fftw3 \
+    -pkg lablgl \
+    -pkg lablgl.glut \
     -syntax bitstring.syntax \
     -syntax sexplib.syntax \
     -tag thread \
