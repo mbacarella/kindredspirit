@@ -117,6 +117,8 @@ module Color = struct
   type t = { r: int; g: int; b: int }
   let black = { r=0; g=0; b=0 }
   let _white = { r=255; g=255; b=255 }
+  let ri () = Random.int 256
+  let rand () = { r=ri (); g=ri (); b=ri () }
 end
 
 module Strip = struct
@@ -199,17 +201,15 @@ let send_pixels_to_pushers socket =
     pusher.Pusher_state.seq <- pusher.Pusher_state.seq + (List.length stripss))
 
 let rec update_loop i =
-  let ri () = Random.int 256 in
-  let pixel = { Color.r = (ri ()); g = (ri ()); b = (ri ()) } in
   Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:_ ~data:pusher ->
     let matrix = pusher.Pusher_state.matrix in
     for i=0 to Array.length matrix - 1; do
-      matrix.(i) <- pixel
+      matrix.(i) <- Color.rand ()
     done);
   Exn.protectx Core.Std.Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0)
     ~finally:(Core.Std.Unix.close ~restart:true)
     ~f:send_pixels_to_pushers;
-  Clock.after (Time.Span.of_ms 100.)
+  Clock.after (Time.Span.of_ms 33.)
   >>= fun () -> update_loop ((i+10) mod 256)
 
 let get_strips () =

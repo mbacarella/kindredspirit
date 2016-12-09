@@ -18,6 +18,12 @@ let key_input ~key ~x:_ ~y:_ =
   | Some char ->
     printf "*** key input: %c\n" char
 
+let idle_func () =
+  (* This sleep is here to prevent glut from starving the
+     async thread. *)
+  Core.Std.Unix.sleep 0;
+  Glut.postRedisplay ()
+    
 let gl_main () =
   let _ = Glut.init ~argv:Sys.argv in
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
