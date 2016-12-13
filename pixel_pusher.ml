@@ -40,7 +40,7 @@ module Beacon = struct
       ; strips_attached : int
       ; max_strips_per_packet : int
       ; pixels_per_strip : int
-      ; update_period : int (* in microseconds *)
+      ; update_period : Time.Span.t
       ; power_total : int (* in PWM units *)
       ; delta_sequence : int (* diff between received and expected sequence numbers *)
       ; controller_ordinal : int
@@ -105,9 +105,13 @@ module Beacon = struct
 	let to_int a = Option.value_exn (Int32.to_int a) in
 	let ip_address = Unix.Inet_addr.inet4_addr_of_int32 ip_address |> Unix.Inet_addr.to_string in
 	let last_driven_ip = Unix.Inet_addr.inet4_addr_of_int32 last_driven_ip |> Unix.Inet_addr.to_string in
+	let update_period =
+	  (* comes over the wire in microseconds *)
+	  Time.Span.of_ms (Int32.to_float update_period /. 1000.0)
+	in
 	{ mac_address ; ip_address ; device_type ; protocol_version ; vendor_id ; product_id
 	; hw_revision ; sw_revision ; link_speed = to_int link_speed ; strips_attached ; max_strips_per_packet
-	; pixels_per_strip ; update_period = to_int update_period ; power_total = to_int power_total
+	; pixels_per_strip ; update_period ; power_total = to_int power_total
 	; delta_sequence = to_int delta_sequence ; controller_ordinal = to_int controller_ordinal 
 	; group_ordinal = to_int group_ordinal; my_port; strip_info; protected; fixed_size
 	; last_driven_ip; last_driven_port }
@@ -137,7 +141,9 @@ module Pusher_state = struct
       { beacon_time : Time.t
       ; beacon      : Beacon.t
       ; mutable seq : int 
-      ; matrix      : Color.t Array.t }
+      ; matrix      : Color.t Array.t
+      ; mutable last_command : Time.t
+      ; socket      : Core.Std.Unix.File_descr.t }
   let known_pushers = String.Table.create ()
   let strips = ref []
   let update () =
@@ -154,25 +160,49 @@ module Pusher_state = struct
     strips := strips'
 end
 
-let send_pixels_to_pushers socket =
+let send_now_or_soon pusher sendfun =
+  let beacon = pusher.Pusher_state.beacon in
+  let ip = beacon.Beacon.ip_address in
+  let update_period = pusher.Pusher_state.beacon.Beacon.update_period in
+  let run_at = Time.add pusher.Pusher_state.last_command update_period in
+  if Time.(<) run_at (Time.now ()) then begin
+    pusher.Pusher_state.last_command <- Time.now (); 
+    sendfun ()
+  end else begin
+    let overrun_span = sec 0.1 in
+    if Time.Span.(>) (Time.diff run_at (Time.now ())) overrun_span then
+      printf "*** PP %s next command scheduled for >%s in the future %s vs %s: update_period: %s; dropping\n"
+	ip (Time.Span.to_string overrun_span) (Time.now () |> Time.to_string) (Time.to_string run_at)
+	(Time.Span.to_string update_period)
+    else begin
+      pusher.Pusher_state.last_command <- run_at;
+      don't_wait_for (Clock.at run_at >>| sendfun)
+    end
+  end
+  
+(* XXX: only send strips that have changed *)
+let send_pixels_to_pushers () =
   Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:ip ~data:pusher ->
     let beacon = pusher.Pusher_state.beacon in
+    let socket = pusher.Pusher_state.socket in
     let addr = Unix.ADDR_INET (Unix.Inet_addr.of_string ip, command_port) in
     let pixels_per_strip = beacon.Beacon.pixels_per_strip in
-    let packet_size num_strips =
-        4 (* 32-bit sequence *)
-      + 1*num_strips (* 8-bit strip indices *)
-      + 3*num_strips*pixels_per_strip (* 24 bit rgb data *)
-    in
     let strips_attached = beacon.Beacon.strips_attached in
     let max_strips_per_packet = beacon.Beacon.max_strips_per_packet in
-    let buf = String.create (packet_size max_strips_per_packet) in
     let stripss =
       List.groupi (List.range 0 strips_attached)
 	~break:(fun i _x _y -> i mod max_strips_per_packet = 0)
     in
     let matrix = pusher.Pusher_state.matrix in
     List.iteri stripss ~f:(fun seq_index strips ->
+      let packet_size =
+	let num_strips = List.length strips in
+	assert (num_strips <= max_strips_per_packet);
+	  4 (* 32-bit sequence *)
+	+ 1*num_strips (* 8-bit strip indices *)
+	+ 3*num_strips*pixels_per_strip (* 24 bit rgb data *)
+      in
+      let buf = String.create packet_size in
       let seq = pusher.Pusher_state.seq + seq_index in
       let char = Char.of_int_exn in
       buf.[0] <- char ((seq lsr 24) land 0xFF);
@@ -189,34 +219,28 @@ let send_pixels_to_pushers socket =
 	  buf.[pixels_base + pixel_num*3 + 1] <- char pixel.g;
 	  buf.[pixels_base + pixel_num*3 + 2] <- char pixel.b
 	done);
-      assert ((List.length strips) <= max_strips_per_packet);
-      let bytes_to_send = packet_size (List.length strips) in
-      let bytes_sent =
-	(* printf "*** Sending %d byte packet to %s:%d\n" bytes_to_send ip command_port; *)
-	Core.Std.Unix.sendto socket ~buf ~pos:0 ~len:bytes_to_send ~mode:[] ~addr
-      in
-      if bytes_sent < bytes_to_send then
-	failwithf "Failed to send %d bytes to %s (%d bytes short)"
-	  bytes_sent ip (String.length buf - bytes_sent) ());
+      send_now_or_soon pusher (fun () ->
+	let bytes_sent = Core.Std.Unix.sendto socket ~buf ~pos:0 ~len:packet_size ~mode:[] ~addr in
+	if bytes_sent < packet_size then
+	  failwithf "Failed to send %d bytes to %s (%d bytes short)"
+	    bytes_sent ip (String.length buf - bytes_sent) ()));
     pusher.Pusher_state.seq <- pusher.Pusher_state.seq + (List.length stripss))
 
-let rec update_loop i =
-  Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:_ ~data:pusher ->
-    let matrix = pusher.Pusher_state.matrix in
-    for i=0 to Array.length matrix - 1; do
-      matrix.(i) <- Color.rand ()
-    done);
-  Exn.protectx Core.Std.Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0)
-    ~finally:(Core.Std.Unix.close ~restart:true)
-    ~f:send_pixels_to_pushers;
-  Clock.after (Time.Span.of_ms 16.)
-  >>= fun () -> update_loop ((i+10) mod 256)
+let updates_to_send = ref false
+  
+let rec update_loop () =
+  if !updates_to_send then begin
+    send_pixels_to_pushers ();
+    updates_to_send := false
+  end;
+  Clock.after (sec 0.02) >>= fun () ->
+  update_loop ()
 
 let get_strips () =
   !Pusher_state.strips
 
 let start_discovery_listener () =
-  don't_wait_for (update_loop 128);
+  don't_wait_for (update_loop ());
   printf "*** Starting Pixel Pusher listener on port %d...\n%!" discovery_port;
   let addr = `Inet (Unix.Inet_addr.bind_any, discovery_port) in
   Async_extra.Udp.bind addr
@@ -242,5 +266,14 @@ let start_discovery_listener () =
 	  printf "*** Discovered new Pixel Pusher: %s\n" addr_s;
 	  printf "%s\n" (Beacon.sexp_of_t beacon |> Sexp.to_string_hum ~indent:2);
 	  let matrix = Array.init num_pixels ~f:(fun _ -> Color.black) in
-	  Hashtbl.add_exn Pusher_state.known_pushers ~key ~data:{ Pusher_state.beacon_time = Time.now (); beacon; seq = 0; matrix };
+	  Hashtbl.add_exn Pusher_state.known_pushers ~key
+	    ~data:{ Pusher_state.beacon_time = Time.now ()
+		  ; beacon = beacon
+		  ; seq = 0
+		  ; matrix = matrix
+		  ; last_command = Time.epoch
+		  ; socket = Core.Std.Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0) };
 	  Pusher_state.update ())
+
+let send_updates () =
+  updates_to_send := true

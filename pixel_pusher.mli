@@ -16,6 +16,7 @@ open Async.Std
   
 module Color : sig
   type t = { r: int; g: int; b: int }
+  val rand : unit -> t
 end
   
 module Strip : sig
@@ -35,3 +36,7 @@ val get_strips : unit -> Strip.t list
    Wrap this in a don't_wait_for because it never becomes
    determined. *)
 val start_discovery_listener : unit -> unit Deferred.t
+
+(* Instructs subsystem to release any pending updates.
+   Do this every time you've finished creating your "frame". *) 
+val send_updates : unit -> unit

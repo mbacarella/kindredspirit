@@ -1,13 +1,15 @@
 open! Core.Std
 open! Async.Std
 
-let target_fps = 60.0
+(* Pixel Pushers "guarantee" 60 hz updates.  Set our target FPS to something lower
+   so we don't drop packets/clip.  *)
+let target_fps = 45.0
 let display_interval = Time.Span.( / ) (sec 1.0) target_fps
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
 let reshape ~w ~h =
-  printf "*** resize window to %dx%d\n" w h;
+  printf "*** window resized to %dx%d\n" w h;
   GlDraw.viewport ~x:0 ~y:0 ~w ~h
 
 let display () =
@@ -29,9 +31,15 @@ let num_ticks = ref 0
 let last_ticks_print_time = ref (Time.now ())
 let last_ticks_print_num = ref 0
 
+let set_random_pixels () =
+  List.iter (Pixel_pusher.get_strips ()) ~f:(fun strip ->
+    List.iter (List.range 0 strip.Pixel_pusher.Strip.strip_length) ~f:(fun index ->
+      Pixel_pusher.Strip.set_pixel strip ~color:(Pixel_pusher.Color.rand ())
+	~index))
+
 let tick () =
   num_ticks := !num_ticks + 1;
-  if Time.diff (Time.now ()) !last_ticks_print_time > (sec 1.0) then begin
+  if Time.diff (Time.now ()) !last_ticks_print_time > (sec 10.0) then begin
     printf "%s idle calls: %d ticks/sec, frames: %d\n%!"
       (Time.now () |> Time.to_string) (!num_ticks - !last_ticks_print_num)
       !num_display_calls;
@@ -40,8 +48,11 @@ let tick () =
   end;
   (* This no-op sleep is here to make sure GLUT doesn't starve Async. *)
   Core.Std.Unix.sleep 0;
-  if Time.Span.(>) (Time.diff (Time.now ()) !last_display_time) display_interval then
-      Glut.postRedisplay ()
+  if Time.Span.(>) (Time.diff (Time.now ()) !last_display_time) display_interval then begin
+    set_random_pixels ();
+    Pixel_pusher.send_updates ();
+    Glut.postRedisplay ()
+  end
     
 let gl_main () =
   let _ = Glut.init ~argv:Sys.argv in
