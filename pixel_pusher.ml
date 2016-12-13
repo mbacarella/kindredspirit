@@ -192,7 +192,7 @@ let send_pixels_to_pushers socket =
       assert ((List.length strips) <= max_strips_per_packet);
       let bytes_to_send = packet_size (List.length strips) in
       let bytes_sent =
-	printf "*** Sending %d byte packet to %s:%d\n" bytes_to_send ip command_port;
+	(* printf "*** Sending %d byte packet to %s:%d\n" bytes_to_send ip command_port; *)
 	Core.Std.Unix.sendto socket ~buf ~pos:0 ~len:bytes_to_send ~mode:[] ~addr
       in
       if bytes_sent < bytes_to_send then
@@ -209,7 +209,7 @@ let rec update_loop i =
   Exn.protectx Core.Std.Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0)
     ~finally:(Core.Std.Unix.close ~restart:true)
     ~f:send_pixels_to_pushers;
-  Clock.after (Time.Span.of_ms 33.)
+  Clock.after (Time.Span.of_ms 16.)
   >>= fun () -> update_loop ((i+10) mod 256)
 
 let get_strips () =

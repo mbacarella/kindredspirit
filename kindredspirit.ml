@@ -1,6 +1,11 @@
 open! Core.Std
 open! Async.Std
 
+let target_fps = 60.0
+let display_interval = Time.Span.( / ) (sec 1.0) target_fps
+let num_display_calls = ref 0
+let last_display_time = ref Time.epoch
+
 let reshape ~w ~h =
   printf "*** resize window to %dx%d\n" w h;
   GlDraw.viewport ~x:0 ~y:0 ~w ~h
@@ -10,19 +15,33 @@ let display () =
   GlDraw.color (1.0, 1.0, 0.0);
   GlDraw.rect (100.0, 100.0) (300.0, 200.0);
   Gl.flush ();
-  Glut.swapBuffers ()
-
+  Glut.swapBuffers ();
+  last_display_time := Time.now ();
+  num_display_calls := !num_display_calls + 1
+    
 let key_input ~key ~x:_ ~y:_ =
   match Char.of_int key with
   | None -> printf "wat (key code: %d)\n" key
   | Some char ->
     printf "*** key input: %c\n" char
 
-let idle_func () =
-  (* This sleep is here to prevent glut from starving the
-     async thread. *)
+let num_ticks = ref 0
+let last_ticks_print_time = ref (Time.now ())
+let last_ticks_print_num = ref 0
+
+let tick () =
+  num_ticks := !num_ticks + 1;
+  if Time.diff (Time.now ()) !last_ticks_print_time > (sec 1.0) then begin
+    printf "%s idle calls: %d ticks/sec, frames: %d\n%!"
+      (Time.now () |> Time.to_string) (!num_ticks - !last_ticks_print_num)
+      !num_display_calls;
+    last_ticks_print_time := Time.now ();
+    last_ticks_print_num := !num_ticks
+  end;
+  (* This no-op sleep is here to make sure GLUT doesn't starve Async. *)
   Core.Std.Unix.sleep 0;
-  Glut.postRedisplay ()
+  if Time.Span.(>) (Time.diff (Time.now ()) !last_display_time) display_interval then
+      Glut.postRedisplay ()
     
 let gl_main () =
   let _ = Glut.init ~argv:Sys.argv in
@@ -38,7 +57,7 @@ let gl_main () =
 
   Glut.reshapeFunc ~cb:reshape;
   Glut.displayFunc ~cb:display;
-  Glut.idleFunc ~cb:(Some Glut.postRedisplay);
+  Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
   Glut.mainLoop ()
   
