@@ -172,7 +172,7 @@ let send_now_or_soon pusher sendfun =
     end
   end
   
-(* XXX: only send strips that have changed *)
+
 let send_pixels_to_pushers () =
   Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:ip ~data:pusher ->
     let beacon = pusher.Pusher_state.beacon in
@@ -181,6 +181,7 @@ let send_pixels_to_pushers () =
     let pixels_per_strip = beacon.Beacon.pixels_per_strip in
     let strips_attached = beacon.Beacon.strips_attached in
     let max_strips_per_packet = beacon.Beacon.max_strips_per_packet in
+    (* TODO: only send strips that have changed *)
     let stripss =
       List.groupi (List.range 0 strips_attached)
 	~break:(fun i _x _y -> i mod max_strips_per_packet = 0)

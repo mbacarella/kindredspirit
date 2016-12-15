@@ -10,7 +10,10 @@ let target_fps = 45.0
 let display_interval = Time.Span.( / ) (sec 1.0) target_fps
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
-  
+
+let mouse_x = ref 0
+let mouse_y = ref 0
+
 let reshape ~w ~h =
   (* The actual "world" stays fixed to display_width and display_height
      even if the user resizes. *)
@@ -53,6 +56,7 @@ module Animation_list = struct
     let x = 0. in
     let height = 10. in
     List.iteri Animation.all ~f:(fun i a ->
+      (* TODO: highlight this line if the mouse is inside of it *)
       let y = display_height -. (height *. (Float.of_int (i+1))) in
       text ~x ~y a.Animation.name)
 end
@@ -102,15 +106,15 @@ let tick () =
     last_ticks_print_num := !num_ticks
   end;
   (* This no-op sleep is here to make sure GLUT doesn't starve Async. *)
+  (* TODO: we're currently burning 100% cpu by hooking into the glut idle func
+     to give time to async.  Find a way to use GLUT in polling mode, or make
+     the GL/GLU/X11 calls to set up the environment directly. *)
   Core.Std.Unix.sleep 0;
   if Time.Span.(>) (Time.diff (Time.now ()) !last_display_time) display_interval then begin
     set_random_pixels ();
     Pixel_pusher.send_updates ();
     Glut.postRedisplay ()
   end
-
-let mouse_moved ~x ~y =
-  printf "*** mouse moved: %d %d\n" x y
 
 let mouse_clicked ~button ~state ~x ~y =
   printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
@@ -140,7 +144,9 @@ let gl_main () =
   Glut.displayFunc ~cb:display;
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
-  Glut.passiveMotionFunc ~cb:mouse_moved;
+  Glut.passiveMotionFunc ~cb:(fun ~x ~y ->
+    mouse_x := x;
+    mouse_y := y);
   Glut.mouseFunc ~cb:mouse_clicked;
   Glut.mainLoop ()
   
