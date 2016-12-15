@@ -62,7 +62,7 @@ let display () =
 
   Animation_list.draw ();
   
-  GlDraw.color (1.0, 1.0, 0.0);  
+  GlDraw.color (1.0, 1.0, 0.0);
   GlDraw.rect (0.0, 100.0) (display_width, 200.0);
   GlDraw.rect (100.0, 0.0) (200.0, display_height);
     
@@ -89,7 +89,7 @@ let last_ticks_print_num = ref 0
 let set_random_pixels () =
   List.iter (Pixel_pusher.get_strips ()) ~f:(fun strip ->
     List.iter (List.range 0 strip.Pixel_pusher.Strip.strip_length) ~f:(fun index ->
-      Pixel_pusher.Strip.set_pixel strip ~color:(Pixel_pusher.Color.rand ())
+      Pixel_pusher.Strip.set_pixel strip ~color:(Color.rand ())
 	~index))
 
 let tick () =

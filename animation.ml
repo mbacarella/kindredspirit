@@ -1,8 +1,8 @@
 type t =
     { name : string
     ; update : (unit -> unit)
-    ; mutable primary_color : Pixel_pusher.Color.t option
-    ; mutable secondary_color : Pixel_pusher.Color.t option }
+    ; mutable primary_color : Color.t option
+    ; mutable secondary_color : Color.t option }
 
 let off_animation =
   { name = "off"
@@ -13,7 +13,7 @@ let off_animation =
 let solid_animation =
   { name = "solid"
   ; update = (fun () -> ())
-  ; primary_color = Some Pixel_pusher.Color.white
+  ; primary_color = Some Color.white
   ; secondary_color = None }
     
 let all =
