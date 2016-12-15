@@ -40,10 +40,10 @@ module Fps = struct
     let now = Time.now () in
     let span = Time.diff now !last_update_time |> Time.Span.to_sec in
     if span >= 1.0 then begin
-      let num_calls = Float.of_int !num_display_calls in
-      fps := (num_calls -. !last_update_frames) /. span;
+      let num_display_calls = Float.of_int !num_display_calls in
+      fps := (num_display_calls -. !last_update_frames) /. span;
       last_update_time := now;
-      last_update_frames := num_calls
+      last_update_frames := num_display_calls
     end;
     text ~x:(display_width -. 50.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
 end
