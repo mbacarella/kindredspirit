@@ -10,25 +10,63 @@ let target_fps = 45.0
 let display_interval = Time.Span.( / ) (sec 1.0) target_fps
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
-
+  
 let reshape ~w ~h =
   (* The actual "world" stays fixed to display_width and display_height
      even if the user resizes. *)
   GlDraw.viewport ~x:0 ~y:0 ~w ~h
 
+let text ?size ~x ~y s =
+  let font =
+    match size with
+    | None | Some `sm -> Glut.BITMAP_HELVETICA_10
+    | Some `md -> Glut.BITMAP_HELVETICA_12
+    | Some `lg -> Glut.BITMAP_HELVETICA_18
+  in
+  GlMat.push ();
+  GlMat.load_identity ();
+  GlDraw.color (1.0, 1.0, 1.0);
+  GlPix.raster_pos ~x ~y ();
+  String.iter ~f:(fun c ->
+    let c = Char.to_int c in
+    Glut.bitmapCharacter ~font ~c) s;
+  GlMat.pop ()
+
+module Fps = struct
+  let last_update_time = ref Time.epoch
+  let last_update_frames = ref 0.
+  let fps = ref 0.
+  let draw () =
+    let now = Time.now () in
+    let span = Time.diff now !last_update_time |> Time.Span.to_sec in
+    if span >= 1.0 then begin
+      let num_calls = Float.of_int !num_display_calls in
+      fps := (num_calls -. !last_update_frames) /. span;
+      last_update_time := now;
+      last_update_frames := num_calls
+    end;
+    text ~x:(display_width -. 50.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
+end
+
 let display () =
   GlClear.clear [`color];
   GlDraw.color (1.0, 1.0, 0.0);
   GlDraw.rect (0.0, 100.0) (display_width, 200.0);
-  GlDraw.rect (100.0, 0.0) (200.0, display_height); 
+  GlDraw.rect (100.0, 0.0) (200.0, display_height);
+
+  Fps.draw ();
   Gl.flush ();
   Glut.swapBuffers ();
+
   last_display_time := Time.now ();
   num_display_calls := !num_display_calls + 1
-    
+
 let key_input ~key ~x:_ ~y:_ =
   match Char.of_int key with
   | None -> printf "wat (key code: %d)\n" key
+  | Some 'Q' ->
+    printf "*** Shutting down on 'Q' command\n";
+    Shutdown.shutdown 0
   | Some char ->
     printf "*** key input: %c\n" char
 
@@ -75,7 +113,6 @@ let gl_main () =
   Glut.displayFunc ~cb:display;
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
-  Glut.fullScreen ();
   Glut.mainLoop ()
   
 let main () =
