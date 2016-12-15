@@ -108,6 +108,21 @@ let tick () =
     Pixel_pusher.send_updates ();
     Glut.postRedisplay ()
   end
+
+let mouse_moved ~x ~y =
+  printf "*** mouse moved: %d %d\n" x y
+
+let mouse_clicked ~button ~state ~x ~y =
+  printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
+    (match button with
+      | Glut.LEFT_BUTTON -> "left"
+      | Glut.MIDDLE_BUTTON -> "middle"
+      | Glut.RIGHT_BUTTON -> "right"
+      | Glut.OTHER_BUTTON i -> sprintf "other:%d" i)
+    (match state with
+      | Glut.UP -> "up"
+      | Glut.DOWN -> "down")
+    x y
     
 let gl_main () =
   let _ = Glut.init ~argv:Sys.argv in
@@ -125,6 +140,8 @@ let gl_main () =
   Glut.displayFunc ~cb:display;
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
+  Glut.passiveMotionFunc ~cb:mouse_moved;
+  Glut.mouseFunc ~cb:mouse_clicked;
   Glut.mainLoop ()
   
 let main () =
