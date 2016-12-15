@@ -12,6 +12,8 @@ let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
 let reshape ~w ~h =
+  (* The actual "world" stays fixed to display_width and display_height
+     even if the user resizes. *)
   GlDraw.viewport ~x:0 ~y:0 ~w ~h
 
 let display () =
@@ -73,6 +75,7 @@ let gl_main () =
   Glut.displayFunc ~cb:display;
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
+  Glut.fullScreen ();
   Glut.mainLoop ()
   
 let main () =
