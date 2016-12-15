@@ -52,13 +52,29 @@ module Fps = struct
 end
 
 module Animation_list = struct
+  let height = 10.
+  let width = 100.
+  let mouse_over_animation () =
+    let x = 0. in
+    let mouse_x = Float.of_int !mouse_x in
+    let mouse_y = Float.of_int !mouse_y in
+    List.findi Animation.all ~f:(fun i _a ->
+      let y = height *. (Float.of_int i) in
+      mouse_x >= x && mouse_x < width && mouse_y >= y && mouse_y < y +. height)
   let draw () =
     let x = 0. in
-    let height = 10. in
+    let hovered_a = mouse_over_animation () in
     List.iteri Animation.all ~f:(fun i a ->
-      (* TODO: highlight this line if the mouse is inside of it *)
       let y = display_height -. (height *. (Float.of_int (i+1))) in
-      text ~x ~y a.Animation.name)
+      let text () = text ~x ~y a.Animation.name in
+      match hovered_a with
+	| None -> text ()
+	| Some (_, a') ->
+	  if a'.Animation.name = a.Animation.name then begin
+	    GlDraw.color (0.0, 1.0, 0.0);
+	    GlDraw.rect (0.0, y) (width, y +. height)
+	  end;
+	  text ())
 end
   
 let display () =
@@ -117,6 +133,8 @@ let tick () =
   end
 
 let mouse_clicked ~button ~state ~x ~y =
+  mouse_x := x; mouse_y := y;
+  (*
   printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
     (match button with
       | Glut.LEFT_BUTTON -> "left"
@@ -127,6 +145,15 @@ let mouse_clicked ~button ~state ~x ~y =
       | Glut.UP -> "up"
       | Glut.DOWN -> "down")
     x y
+  *)
+  match button, state with
+    | Glut.LEFT_BUTTON, Glut.DOWN ->
+      begin match Animation_list.mouse_over_animation () with
+	| None -> ()
+	| Some (_, a) ->
+	  printf "*** load new animation into preview: %s\n" a.Animation.name
+      end
+    | _, _ -> ()
     
 let gl_main () =
   let _ = Glut.init ~argv:Sys.argv in
@@ -144,9 +171,7 @@ let gl_main () =
   Glut.displayFunc ~cb:display;
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
-  Glut.passiveMotionFunc ~cb:(fun ~x ~y ->
-    mouse_x := x;
-    mouse_y := y);
+  Glut.passiveMotionFunc ~cb:(fun ~x ~y -> mouse_x := x; mouse_y := y);
   Glut.mouseFunc ~cb:mouse_clicked;
   Glut.mainLoop ()
   
