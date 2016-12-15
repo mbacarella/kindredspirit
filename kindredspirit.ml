@@ -1,6 +1,9 @@
 open! Core.Std
 open! Async.Std
 
+let display_width = 1600.0
+let display_height = 834.0
+  
 (* Pixel Pushers "guarantee" 60 hz updates.  Set our target FPS to something lower
    so we don't drop packets/clip.  *)
 let target_fps = 45.0
@@ -9,13 +12,13 @@ let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
 let reshape ~w ~h =
-  printf "*** window resized to %dx%d\n" w h;
   GlDraw.viewport ~x:0 ~y:0 ~w ~h
 
 let display () =
   GlClear.clear [`color];
   GlDraw.color (1.0, 1.0, 0.0);
-  GlDraw.rect (100.0, 100.0) (300.0, 200.0);
+  GlDraw.rect (0.0, 100.0) (display_width, 200.0);
+  GlDraw.rect (100.0, 0.0) (200.0, display_height); 
   Gl.flush ();
   Glut.swapBuffers ();
   last_display_time := Time.now ();
@@ -59,10 +62,10 @@ let gl_main () =
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
   let _ = Glut.createWindow ~title:"Kindred Spirit Lighting Console" in
 
-  Glut.positionWindow ~x:200 ~y:100;
+  Glut.positionWindow ~x:0 ~y:0;
   GlMat.mode `projection;
   GlMat.load_identity ();
-  GlMat.ortho ~x:(0.0, 500.0) ~y:(0.0, 600.0) ~z:(-100.0, 100.0);
+  GlMat.ortho ~x:(0.0, display_width) ~y:(0.0, display_height) ~z:(-100.0, 100.0);
   GlMat.mode `modelview;
   GlMat.load_identity ();
 
