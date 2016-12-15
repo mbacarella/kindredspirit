@@ -6,5 +6,5 @@ type t =
 
 (* All animations available. *)
       
-val all = t list
+val all : t list
   

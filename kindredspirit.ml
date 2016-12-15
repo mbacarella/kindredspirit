@@ -48,12 +48,24 @@ module Fps = struct
     text ~x:(display_width -. 50.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
 end
 
+module Animation_list = struct
+  let draw () =
+    let x = 0. in
+    let height = 10. in
+    List.iteri Animation.all ~f:(fun i a ->
+      let y = display_height -. (height *. (Float.of_int (i+1))) in
+      text ~x ~y a.Animation.name)
+end
+  
 let display () =
   GlClear.clear [`color];
-  GlDraw.color (1.0, 1.0, 0.0);
+
+  Animation_list.draw ();
+  
+  GlDraw.color (1.0, 1.0, 0.0);  
   GlDraw.rect (0.0, 100.0) (display_width, 200.0);
   GlDraw.rect (100.0, 0.0) (200.0, display_height);
-
+    
   Fps.draw ();
   Gl.flush ();
   Glut.swapBuffers ();
