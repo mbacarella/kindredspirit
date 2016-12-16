@@ -39,7 +39,7 @@ module Fps = struct
   let last_update_time = ref Time.epoch
   let last_update_frames = ref 0.
   let fps = ref 0.
-  let draw () =
+  let display () =
     let now = Time.now () in
     let span = Time.diff now !last_update_time |> Time.Span.to_sec in
     if span >= 1.0 then begin
@@ -48,7 +48,7 @@ module Fps = struct
       last_update_time := now;
       last_update_frames := num_display_calls
     end;
-    text ~x:(display_width -. 50.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
+    text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
 end
 
 module Animation_list = struct
@@ -61,7 +61,7 @@ module Animation_list = struct
     List.findi Animation.all ~f:(fun i _a ->
       let y = height *. (Float.of_int i) in
       mouse_x >= x && mouse_x < width && mouse_y >= y && mouse_y < y +. height)
-  let draw () =
+  let display () =
     let x = 0. in
     let hovered_a = mouse_over_animation () in
     List.iteri Animation.all ~f:(fun i a ->
@@ -76,17 +76,45 @@ module Animation_list = struct
 	  end;
 	  text ())
 end
+
+module Preview_pane = struct
+  let x = Animation_list.width
+  let y = 0.
+  let width = (display_width -. x) /. 2.0
+  let loaded_animation = ref None
+  let display () =
+    let s = sprintf "preview: %s"
+      (match !loaded_animation with
+	| None -> "none"
+	| Some a -> a.Animation.name)
+    in
+    text ~x ~y:(display_height -. 10.) s
+end
+
+module Live_pane = struct
+  let x = Animation_list.width +. Preview_pane.width
+  let y = 0.
+  let loaded_animation = ref None
+  let width = display_width -. x
+  let display () =
+    let s = sprintf "live: %s"
+      (match !loaded_animation with
+	| None -> "none"
+	| Some a -> a.Animation.name)
+    in
+    text ~x ~y:(display_height -. 10.) s
+end
   
 let display () =
   GlClear.clear [`color];
-
-  Animation_list.draw ();
+  Animation_list.display ();
   
   GlDraw.color (1.0, 1.0, 0.0);
   GlDraw.rect (0.0, 100.0) (display_width, 200.0);
-  GlDraw.rect (100.0, 0.0) (200.0, display_height);
-    
-  Fps.draw ();
+  GlDraw.rect (100.0, 0.0) (101.0, display_height);
+  Preview_pane.display ();
+  Live_pane.display ();
+  Fps.display ();
   Gl.flush ();
   Glut.swapBuffers ();
 
