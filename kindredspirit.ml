@@ -91,7 +91,7 @@ let display () =
   Glut.swapBuffers ();
 
   last_display_time := Time.now ();
-  num_display_calls := !num_display_calls + 1
+  incr num_display_calls
 
 let key_input ~key ~x:_ ~y:_ =
   match Char.of_int key with
@@ -113,7 +113,7 @@ let set_random_pixels () =
 	~index))
 
 let tick () =
-  num_ticks := !num_ticks + 1;
+  incr num_ticks;
   if Time.diff (Time.now ()) !last_ticks_print_time > (sec 10.0) then begin
     printf "%s idle calls: %d ticks/sec, frames: %d\n%!"
       (Time.now () |> Time.to_string) (!num_ticks - !last_ticks_print_num)
@@ -135,7 +135,7 @@ let tick () =
 let mouse_clicked ~button ~state ~x ~y =
   mouse_x := x; mouse_y := y;
   (*
-  printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
+ printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
     (match button with
       | Glut.LEFT_BUTTON -> "left"
       | Glut.MIDDLE_BUTTON -> "middle"
@@ -147,13 +147,13 @@ let mouse_clicked ~button ~state ~x ~y =
     x y
   *)
   match button, state with
-    | Glut.LEFT_BUTTON, Glut.DOWN ->
-      begin match Animation_list.mouse_over_animation () with
-	| None -> ()
-	| Some (_, a) ->
-	  printf "*** load new animation into preview: %s\n" a.Animation.name
-      end
-    | _, _ -> ()
+  | Glut.LEFT_BUTTON, Glut.DOWN ->
+    begin match Animation_list.mouse_over_animation () with
+      | None -> ()
+      | Some (_, a) ->
+	printf "*** load new animation into preview: %s\n" a.Animation.name
+    end
+  | _, _ -> ()
     
 let gl_main () =
   let _ = Glut.init ~argv:Sys.argv in
