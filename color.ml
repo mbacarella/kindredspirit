@@ -1,4 +1,6 @@
-type t = { r: int; g: int; b: int }
+open Core.Std
+  
+type t = { r: int; g: int; b: int } with sexp
 let black = { r=0; g=0; b=0 }
 let white = { r=255; g=255; b=255 }
 let ri () = Random.int 256

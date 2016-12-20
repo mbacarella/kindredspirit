@@ -182,7 +182,7 @@ let mouse_clicked ~button ~state ~x ~y =
 	printf "*** load new animation into preview: %s\n" a.Animation.name
     end
   | _, _ -> ()
-    
+
 let gl_main () =
   let _ = Glut.init ~argv:Sys.argv in
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
@@ -204,6 +204,7 @@ let gl_main () =
   Glut.mainLoop ()
   
 let main () =
+  don't_wait_for (Model.load "model.csv" >>| ignore);
   don't_wait_for (In_thread.run gl_main);
   Pixel_pusher.start_discovery_listener ()
 
