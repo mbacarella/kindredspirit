@@ -33,12 +33,12 @@ type t =
   ; virtual_pixels : Virtual_pixel.t list }
 with sexp
 
+let signum f =
+  if f > 0 then 1
+  else if f < 0 then -1
+  else 0
+
 let bres3d ~start ~stop =
-  let signum f =
-    if f > 0 then 1
-    else if f < 0 then -1
-    else 0
-  in
   (* this is kind of awful *)
   let i = Float.to_int in
   let f = Float.of_int in
@@ -60,11 +60,12 @@ let bres3d ~start ~stop =
   let x = ref startx in
   let y = ref starty in
   let z = ref startz in
+  let save acc = { Coordinate.x=f !x; y=f !y; z=f !z } :: acc in
   if ax >= max ay az then (* x dominant *)
     let deltay = ref (ay - (ax lsr 1)) in
     let deltaz = ref (az - (ax lsr 1)) in
     let rec loop acc =
-      let acc = { Coordinate.x=f !x; y=f !y; z=f !z } :: acc in
+      let acc = save acc in
       if !x = stopx then acc
       else begin
 	if !deltay >= 0 then begin
@@ -85,7 +86,7 @@ let bres3d ~start ~stop =
     let deltax = ref (ax - (ay lsr 1)) in
     let deltaz = ref (az - (ay lsr 1)) in
     let rec loop acc =
-      let acc = { Coordinate.x=f !x; y=f !y; z=f !z } :: acc in
+      let acc = save acc in
       if !y = stopy then acc
       else begin
 	if !deltax >= 0 then begin
@@ -106,7 +107,7 @@ let bres3d ~start ~stop =
     let deltax = ref (ax - (az lsr 1)) in
     let deltay = ref (ay - (az lsr 1)) in
     let rec loop acc =
-      let acc = { Coordinate.x=f !x; y=f !y; z=f !z } :: acc in
+      let acc = save acc in
       if !z = stopz then acc
       else begin
 	if !deltax >= 0 then begin
