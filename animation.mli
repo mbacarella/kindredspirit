@@ -1,6 +1,6 @@
 type t =
     { name : string
-    ; update : (unit -> unit)
+    ; update : (t -> unit)
     ; mutable model : Model.t option
     ; mutable primary_color : Color.t option
     ; mutable secondary_color : Color.t option }

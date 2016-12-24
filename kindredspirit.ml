@@ -77,19 +77,18 @@ module Animation_list = struct
 	  text ())
 end
 
+let display_animation ~x a tag =
+  let s = sprintf "%s: %s" tag a.Animation.name in
+  text ~x ~y:(display_height -. 10.) s;
+  a.Animation.update a
+
 module Preview_pane = struct
   let x = Animation_list.width
   let y = 0.
   let width = (display_width -. x) /. 2.0
   let loaded_animation = ref Animation.off
   let display () =
-    let s = sprintf "preview: %s" !loaded_animation.Animation.name in
-    text ~x ~y:(display_height -. 10.) s
-  let load_animation a model =
-    printf "*** preview animation changed from %s to %s\n"
-      !loaded_animation.Animation.name a.Animation.name;
-    a.Animation.model <- Some model;
-    loaded_animation := a
+    display_animation ~x !loaded_animation "preview"
 end
 
 module Live_pane = struct
@@ -97,9 +96,11 @@ module Live_pane = struct
   let y = 0.
   let loaded_animation = ref Animation.off
   let width = display_width -. x
+  let load_preview_animation () =
+    (* XXX: make private copy of pixels *)
+    loaded_animation := !Preview_pane.loaded_animation
   let display () =
-    let s = sprintf "live: %s" !loaded_animation.Animation.name in
-    text ~x ~y:(display_height -. 10.) s
+    display_animation ~x !loaded_animation "live"
 end
 
 let send_frame_to_pixel_pushers a =
@@ -126,12 +127,14 @@ let display () =
 
 let key_input ~key ~x:_ ~y:_ =
   match Char.of_int key with
-  | None -> printf "wat (key code: %d)\n" key
-  | Some 'Q' ->
-    printf "*** Shutting down on 'Q' command\n";
-    Shutdown.shutdown 0
-  | Some char ->
-    printf "*** key input: %c\n" char
+    | None -> printf "wat (key code: %d)\n" key
+    | Some '\r' -> Live_pane.load_preview_animation ()
+    | Some '\n' -> printf "received line feed?!\n"
+    | Some 'Q' ->
+      printf "*** Shutting down on 'Q' command\n";
+      Shutdown.shutdown 0
+    | Some char ->
+      printf "*** key input: %c\n" char
 
 let num_ticks = ref 0
 let last_ticks_print_time = ref (Time.now ())
@@ -182,7 +185,7 @@ let mouse_clicked ~model ~button ~state ~x ~y =
     begin match Animation_list.mouse_over_animation () with
       | None -> ()
       | Some (_, a) ->
-	Preview_pane.load_animation a model
+	Preview_pane.loaded_animation := Animation.init a model
     end
   | _, _ -> ()
 
