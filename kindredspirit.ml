@@ -100,15 +100,28 @@ let display_animation ~x a tag =
   let s = sprintf "%s: %s" tag a.Animation.name in
   text ~x ~y:(display_height -. 10.) s;
   a.Animation.update a;
-  display_model~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model)
+  display_model ~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model)
+
+let color_picker_kind a =
+  match a.Animation.primary_color, a.Animation.secondary_color with
+    | None, None -> `NA
+    | Some _, None -> `Primary (0, 0)
+    | Some _, Some _ -> `Primary_and_secondary ((0, 0), (0, 0))
+    | None, Some _ ->
+      failwithf "animation '%s' has a secondary color but no primary" a.Animation.name ()
 
 module Preview_pane = struct
   let x = List_pane.width
   let y = 0.
   let width = (display_width -. x) /. 2.0
   let loaded_animation = ref Animation.off
+  let color_picker = { Color_picker.x = x; y; width; height=200.; kind=color_picker_kind !loaded_animation }
+  let load_animation a model =
+    color_picker.Color_picker.kind <- color_picker_kind a;
+    loaded_animation := Animation.init a model
   let display () =
-    display_animation ~x !loaded_animation "preview"
+    display_animation ~x !loaded_animation "preview";
+    Color_picker.display color_picker
 end
 
 module Live_pane = struct
@@ -116,11 +129,14 @@ module Live_pane = struct
   let y = 0.
   let loaded_animation = ref Animation.off
   let width = display_width -. x
-  let load_preview_animation () =
+  let color_picker = { Color_picker.x = x; y; width; height=200.; kind=color_picker_kind !loaded_animation }
+  let load_animation_from_preview () =
     let a = !Preview_pane.loaded_animation in
+    color_picker.Color_picker.kind <- Preview_pane.color_picker.Color_picker.kind; 
     loaded_animation := Animation.init a (Option.value_exn a.Animation.model)
   let display () =
-    display_animation ~x !loaded_animation "live"
+    display_animation ~x !loaded_animation "live";
+    Color_picker.display color_picker
 end
 
 let send_frame_to_pixel_pushers a =
@@ -144,7 +160,7 @@ let display () =
 let key_input ~key ~x:_ ~y:_ =
   match Char.of_int key with
     | None -> printf "wat (key code: %d)\n" key
-    | Some '\r' -> Live_pane.load_preview_animation ()
+    | Some '\r' -> Live_pane.load_animation_from_preview ()
     | Some '\n' -> printf "received line feed?!\n"
     | Some 'Q' ->
       printf "*** Shutting down on 'Q' command\n";
@@ -201,7 +217,7 @@ let mouse_clicked ~model ~button ~state ~x ~y =
     begin match List_pane.mouse_over_animation () with
       | None -> ()
       | Some (_, a) ->
-	Preview_pane.loaded_animation := Animation.init a model
+	Preview_pane.load_animation a model
     end
   | _, _ -> ()
 

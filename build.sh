@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SRCS=pixel_pusher.ml
+SRCS=kindredspirit.ml
 
 ocamlbuild \
     -r \
