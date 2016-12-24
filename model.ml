@@ -183,8 +183,6 @@ let load path =
 	  | _lst ->
 	    failwithf "line '%s' split on | into too many parts" line ())
   in
-  (* List.iter virtual_strips ~f:(fun strip ->
-    print_endline (Virtual_strip.sexp_of_t strip |> Sexp.to_string_hum ~indent:2)); *)
   let virtual_pixels = rasterize virtual_strips in
   { virtual_strips; virtual_pixels }
 
