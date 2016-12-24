@@ -84,7 +84,9 @@ let display_model ~center:(x, y) model =
   GlMat.load_identity ();
   let angle = Float.of_int (!num_display_calls mod 360) in
   GlMat.translate ~x ~y ();
-  GlMat.rotate ~angle ~x:0. ~y:1. ~z:0. ();
+  GlMat.rotate ~angle ~x:0. ~y:1.0 ~z:0. ();
+  GlMat.scale ~x:1.5 ~y:1.5 ~z:1.5 ();
+  GlDraw.point_size 2.0;
   GlDraw.begins `points;
   List.iter model.Model.virtual_pixels ~f:(fun vp ->
     GlDraw.color (Color.to_gl vp.Model.Virtual_pixel.color);
@@ -98,7 +100,7 @@ let display_animation ~x a tag =
   let s = sprintf "%s: %s" tag a.Animation.name in
   text ~x ~y:(display_height -. 10.) s;
   a.Animation.update a;
-  display_model ~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model)
+  display_model~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model)
 
 module Preview_pane = struct
   let x = List_pane.width
