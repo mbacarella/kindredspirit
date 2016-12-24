@@ -10,12 +10,14 @@ let off_animation =
   ; primary_color = None
   ; secondary_color = None }
 
+  
 let solid_animation =
   { name = "solid"
   ; update = (fun () -> ())
   ; primary_color = Some Color.white
   ; secondary_color = None }
-    
+
+let off = off_animation
 let all =
   [ off_animation
   ; solid_animation ]

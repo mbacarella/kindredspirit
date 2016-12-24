@@ -81,27 +81,19 @@ module Preview_pane = struct
   let x = Animation_list.width
   let y = 0.
   let width = (display_width -. x) /. 2.0
-  let loaded_animation = ref None
+  let loaded_animation = ref Animation.off
   let display () =
-    let s = sprintf "preview: %s"
-      (match !loaded_animation with
-	| None -> "none"
-	| Some a -> a.Animation.name)
-    in
+    let s = sprintf "preview: %s" !loaded_animation.Animation.name in
     text ~x ~y:(display_height -. 10.) s
 end
 
 module Live_pane = struct
   let x = Animation_list.width +. Preview_pane.width
   let y = 0.
-  let loaded_animation = ref None
+  let loaded_animation = ref Animation.off
   let width = display_width -. x
   let display () =
-    let s = sprintf "live: %s"
-      (match !loaded_animation with
-	| None -> "none"
-	| Some a -> a.Animation.name)
-    in
+    let s = sprintf "live: %s" !loaded_animation.Animation.name in
     text ~x ~y:(display_height -. 10.) s
 end
   
@@ -179,7 +171,7 @@ let mouse_clicked ~button ~state ~x ~y =
     begin match Animation_list.mouse_over_animation () with
       | None -> ()
       | Some (_, a) ->
-	printf "*** load new animation into preview: %s\n" a.Animation.name
+	Preview_pane.loaded_animation := a
     end
   | _, _ -> ()
 
