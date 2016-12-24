@@ -50,7 +50,7 @@ module Fps = struct
     end;
     text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
 end
-
+ 
 module List_pane = struct
   let height = 10.
   let width = 100.

@@ -187,14 +187,8 @@ let load path =
     print_endline (Virtual_strip.sexp_of_t strip |> Sexp.to_string_hum ~indent:2)); *)
   let virtual_pixels = rasterize virtual_strips in
   { virtual_strips; virtual_pixels }
-    
 
-let dup_virtual_pixels vps =
-  List.map vps ~f:(fun vp ->
-    let c = vp.Virtual_pixel.color in
-    let r, g, b = c.Color.r, c.Color.g, c.Color.b in
-    { vp with Virtual_pixel.
-      color = { Color.r; g; b }})
-     
 let dup t =
-  { t with virtual_pixels = dup_virtual_pixels t.virtual_pixels }
+  { t with
+    virtual_pixels = (* force a deep copy *)
+      List.map t.virtual_pixels ~f:(fun vp -> { vp with Virtual_pixel.color = vp.Virtual_pixel.color }) }
