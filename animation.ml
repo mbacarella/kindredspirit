@@ -15,7 +15,10 @@ let with_model t ~f =
     | None -> failwithf "model not initialized: %s" t.name ()
     | Some model ->
       f t model
-	
+
+let iter_pixels ~f =
+  with_model ~f:(fun t model -> List.iter model.Model.virtual_pixels ~f:(fun vp -> f t vp))
+
 let off_animation =
   { name = "off"
   ; update = (fun _t -> ())
@@ -25,15 +28,20 @@ let off_animation =
 
 let solid_animation =
   { name = "solid"
-  ; update =
-    with_model ~f:(fun t model ->
-      List.iter model.Model.virtual_pixels ~f:(fun vp ->
-	vp.Model.Virtual_pixel.color <- Option.value_exn t.primary_color))
+  ; update = iter_pixels ~f:(fun t vp -> vp.Model.Virtual_pixel.color <- Option.value_exn t.primary_color)
   ; model = None
-  ; primary_color = Some Color.white
+  ; primary_color = Some Color.green
   ; secondary_color = None }
-  
+
+let noise_animation =
+  { name = "noise"
+  ; update = iter_pixels ~f:(fun _t vp -> vp.Model.Virtual_pixel.color <- Color.rand ())
+  ; model = None
+  ; primary_color = None
+  ; secondary_color = None }
+    
 let off = off_animation
 let all =
   [ off_animation
-  ; solid_animation ]
+  ; solid_animation
+  ; noise_animation ]

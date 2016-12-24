@@ -51,7 +51,7 @@ module Fps = struct
     text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
 end
 
-module Animation_list = struct
+module List_pane = struct
   let height = 10.
   let width = 100.
   let mouse_over_animation () =
@@ -83,7 +83,7 @@ let display_animation ~x a tag =
   a.Animation.update a
 
 module Preview_pane = struct
-  let x = Animation_list.width
+  let x = List_pane.width
   let y = 0.
   let width = (display_width -. x) /. 2.0
   let loaded_animation = ref Animation.off
@@ -92,7 +92,7 @@ module Preview_pane = struct
 end
 
 module Live_pane = struct
-  let x = Animation_list.width +. Preview_pane.width
+  let x = List_pane.width +. Preview_pane.width
   let y = 0.
   let loaded_animation = ref Animation.off
   let width = display_width -. x
@@ -111,10 +111,8 @@ let send_frame_to_pixel_pushers a =
       
 let display () =
   GlClear.clear [`color];
-  Animation_list.display ();
-  
-  GlDraw.color (1.0, 1.0, 0.0);
-  GlDraw.rect (0.0, 100.0) (display_width, 200.0);
+  List_pane.display ();
+    GlDraw.color (1.0, 1.0, 0.0);
   GlDraw.rect (100.0, 0.0) (101.0, display_height);
   Preview_pane.display ();
   Live_pane.display ();
@@ -169,7 +167,7 @@ let tick () =
 let mouse_clicked ~model ~button ~state ~x ~y =
   mouse_x := x; mouse_y := y;
   (*
- printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
+    printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
     (match button with
       | Glut.LEFT_BUTTON -> "left"
       | Glut.MIDDLE_BUTTON -> "middle"
@@ -182,7 +180,7 @@ let mouse_clicked ~model ~button ~state ~x ~y =
   *)
   match button, state with
   | Glut.LEFT_BUTTON, Glut.DOWN ->
-    begin match Animation_list.mouse_over_animation () with
+    begin match List_pane.mouse_over_animation () with
       | None -> ()
       | Some (_, a) ->
 	Preview_pane.loaded_animation := Animation.init a model
