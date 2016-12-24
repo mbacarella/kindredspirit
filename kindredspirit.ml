@@ -53,7 +53,7 @@ end
  
 module List_pane = struct
   let height = 10.
-  let width = 100.
+  let width = 160.
   let mouse_over_animation () =
     let x = 0. in
     let mouse_x = Float.of_int !mouse_x in
@@ -115,7 +115,7 @@ module Preview_pane = struct
   let y = 0.
   let width = (display_width -. x) /. 2.0
   let loaded_animation = ref Animation.off
-  let color_picker = { Color_picker.x = x; y; width; height=200.; kind=color_picker_kind !loaded_animation }
+  let color_picker = { Color_picker.x = x; y; width; height=180.; kind=color_picker_kind !loaded_animation }
   let load_animation a model =
     color_picker.Color_picker.kind <- color_picker_kind a;
     loaded_animation := Animation.init a model
@@ -129,7 +129,7 @@ module Live_pane = struct
   let y = 0.
   let loaded_animation = ref Animation.off
   let width = display_width -. x
-  let color_picker = { Color_picker.x = x; y; width; height=200.; kind=color_picker_kind !loaded_animation }
+  let color_picker = { Color_picker.x = x; y; width; height=180.; kind=color_picker_kind !loaded_animation }
   let load_animation_from_preview () =
     let a = !Preview_pane.loaded_animation in
     color_picker.Color_picker.kind <- Preview_pane.color_picker.Color_picker.kind; 
