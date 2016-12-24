@@ -85,6 +85,11 @@ module Preview_pane = struct
   let display () =
     let s = sprintf "preview: %s" !loaded_animation.Animation.name in
     text ~x ~y:(display_height -. 10.) s
+  let load_animation a model =
+    printf "*** preview animation changed from %s to %s\n"
+      !loaded_animation.Animation.name a.Animation.name;
+    a.Animation.model <- Some model;
+    loaded_animation := a
 end
 
 module Live_pane = struct
@@ -96,7 +101,13 @@ module Live_pane = struct
     let s = sprintf "live: %s" !loaded_animation.Animation.name in
     text ~x ~y:(display_height -. 10.) s
 end
-  
+
+let send_frame_to_pixel_pushers a =
+  match a.Animation.model with
+    | None -> failwithf "animation %s is not initiatilized" a.Animation.name ()
+    | Some _model ->
+      ()
+      
 let display () =
   GlClear.clear [`color];
   Animation_list.display ();
@@ -109,7 +120,7 @@ let display () =
   Fps.display ();
   Gl.flush ();
   Glut.swapBuffers ();
-
+  send_frame_to_pixel_pushers !Live_pane.loaded_animation;
   last_display_time := Time.now ();
   incr num_display_calls
 
@@ -152,7 +163,7 @@ let tick () =
     Glut.postRedisplay ()
   end
 
-let mouse_clicked ~button ~state ~x ~y =
+let mouse_clicked ~model ~button ~state ~x ~y =
   mouse_x := x; mouse_y := y;
   (*
  printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
@@ -171,11 +182,11 @@ let mouse_clicked ~button ~state ~x ~y =
     begin match Animation_list.mouse_over_animation () with
       | None -> ()
       | Some (_, a) ->
-	Preview_pane.loaded_animation := a
+	Preview_pane.load_animation a model
     end
   | _, _ -> ()
 
-let gl_main () =
+let gl_main model =
   let _ = Glut.init ~argv:Sys.argv in
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
   let _ = Glut.createWindow ~title:"Kindred Spirit Lighting Console" in
@@ -192,12 +203,17 @@ let gl_main () =
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
   Glut.passiveMotionFunc ~cb:(fun ~x ~y -> mouse_x := x; mouse_y := y);
-  Glut.mouseFunc ~cb:mouse_clicked;
+  Glut.mouseFunc ~cb:(mouse_clicked ~model);
   Glut.mainLoop ()
-  
+
 let main () =
-  don't_wait_for (Model.load "model.csv" >>| ignore);
-  don't_wait_for (In_thread.run gl_main);
+  don't_wait_for begin
+    Model.load "model.csv"
+    >>= fun model ->
+    Preview_pane.loaded_animation := (Animation.init Animation.off model);
+    Live_pane.loaded_animation := (Animation.init Animation.off model);
+    In_thread.run (fun () -> gl_main model)
+  end;
   Pixel_pusher.start_discovery_listener ()
 
 let () =
