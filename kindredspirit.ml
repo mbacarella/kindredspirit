@@ -62,6 +62,8 @@ module List_pane = struct
       let y = height *. (Float.of_int i) in
       mouse_x >= x && mouse_x < width && mouse_y >= y && mouse_y < y +. height)
   let display () =
+    GlDraw.color (0.1, 0.1, 0.1);
+    GlDraw.rect (0., 0.) (width, display_height);
     let x = 0. in
     let hovered_a = mouse_over_animation () in
     List.iteri Animation.all ~f:(fun i a ->
@@ -128,8 +130,6 @@ let send_frame_to_pixel_pushers a =
 let display () =
   GlClear.clear [`color];
   List_pane.display ();
-  GlDraw.color (1.0, 1.0, 0.0);
-  GlDraw.rect (100.0, 0.0) (101.0, display_height);
   Preview_pane.display ();
   Live_pane.display ();
   Fps.display ();
