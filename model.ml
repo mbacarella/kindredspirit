@@ -167,7 +167,7 @@ let load path =
 		    match String.split ~on:',' (String.strip point) with
 		      | x :: y :: z :: [] ->
 			{ Coordinate.
-			  x = Float.of_string x
+			  x = Float.of_string x -. 140. (* hax *)
 			; y = Float.of_string y
 			; z = Float.of_string z }
 		      | _lst ->
@@ -188,3 +188,13 @@ let load path =
   let virtual_pixels = rasterize virtual_strips in
   { virtual_strips; virtual_pixels }
     
+
+let dup_virtual_pixels vps =
+  List.map vps ~f:(fun vp ->
+    let c = vp.Virtual_pixel.color in
+    let r, g, b = c.Color.r, c.Color.g, c.Color.b in
+    { vp with Virtual_pixel.
+      color = { Color.r; g; b }})
+     
+let dup t =
+  { t with virtual_pixels = dup_virtual_pixels t.virtual_pixels }

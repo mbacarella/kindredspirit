@@ -6,7 +6,7 @@ let display_height = 834.0
   
 (* Pixel Pushers "guarantee" 60 hz updates.  Set our target FPS to something lower
    so we don't drop packets/clip.  *)
-let target_fps = 45.0
+let target_fps = 50.0
 let display_interval = Time.Span.( / ) (sec 1.0) target_fps
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
@@ -77,10 +77,26 @@ module List_pane = struct
 	  text ())
 end
 
+let display_model ~center:(x, y) model =
+  GlMat.push ();
+  GlMat.load_identity ();
+  let angle = Float.of_int (!num_display_calls mod 360) in
+  GlMat.translate ~x ~y ();
+  GlMat.rotate ~angle ~x:0. ~y:1. ~z:0. ();
+  GlDraw.begins `points;
+  List.iter model.Model.virtual_pixels ~f:(fun vp ->
+    GlDraw.color (Color.to_gl vp.Model.Virtual_pixel.color);
+    let coord = vp.Model.Virtual_pixel.coord in
+    GlDraw.vertex ~x:coord.Model.Coordinate.x ~y:coord.Model.Coordinate.y
+      ~z:coord.Model.Coordinate.z ());
+  GlDraw.ends ();
+  GlMat.pop ()
+
 let display_animation ~x a tag =
   let s = sprintf "%s: %s" tag a.Animation.name in
   text ~x ~y:(display_height -. 10.) s;
-  a.Animation.update a
+  a.Animation.update a;
+  display_model ~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model)
 
 module Preview_pane = struct
   let x = List_pane.width
@@ -97,8 +113,8 @@ module Live_pane = struct
   let loaded_animation = ref Animation.off
   let width = display_width -. x
   let load_preview_animation () =
-    (* XXX: make private copy of pixels *)
-    loaded_animation := !Preview_pane.loaded_animation
+    let a = !Preview_pane.loaded_animation in
+    loaded_animation := Animation.init a (Option.value_exn a.Animation.model)
   let display () =
     display_animation ~x !loaded_animation "live"
 end
@@ -108,11 +124,11 @@ let send_frame_to_pixel_pushers a =
     | None -> failwithf "animation %s is not initiatilized" a.Animation.name ()
     | Some _model ->
       ()
-      
+
 let display () =
   GlClear.clear [`color];
   List_pane.display ();
-    GlDraw.color (1.0, 1.0, 0.0);
+  GlDraw.color (1.0, 1.0, 0.0);
   GlDraw.rect (100.0, 0.0) (101.0, display_height);
   Preview_pane.display ();
   Live_pane.display ();
@@ -195,7 +211,7 @@ let gl_main model =
   Glut.positionWindow ~x:0 ~y:0;
   GlMat.mode `projection;
   GlMat.load_identity ();
-  GlMat.ortho ~x:(0.0, display_width) ~y:(0.0, display_height) ~z:(-100.0, 100.0);
+  GlMat.ortho ~x:(0.0, display_width) ~y:(0.0, display_height) ~z:(-300.0, 300.0);
   GlMat.mode `modelview;
   GlMat.load_identity ();
 

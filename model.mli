@@ -30,3 +30,4 @@ type t =
 with sexp
     
 val load : string -> t Deferred.t
+val dup : t -> t

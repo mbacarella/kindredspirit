@@ -8,7 +8,7 @@ type t =
     ; mutable secondary_color : Color.t option }
 
 let init t model =
-  { t with model = Some model }
+  { t with model = Some (Model.dup model) }
 
 let with_model t ~f =
   match t.model with
