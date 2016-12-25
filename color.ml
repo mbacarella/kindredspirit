@@ -1,4 +1,4 @@
-open Core.Std
+open! Core.Std
   
 type t = { r: int; g: int; b: int } with sexp
 let black = { r=0; g=0; b=0 }
