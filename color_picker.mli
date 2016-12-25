@@ -1,5 +1,6 @@
 type t
 
+val create : x:float -> y:float -> width:float -> height:float -> t
 val display : t -> unit
 val get_primary : t -> Color.t option
 val get_secondary : t -> Color.t option

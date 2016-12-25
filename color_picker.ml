@@ -8,7 +8,9 @@ type t =
     ; height : float
     ; mutable kind : [ `NA | `Primary of pos | `Primary_and_secondary of pos * pos ] }
 
-      
+let create ~x ~y ~width ~height =
+  { x; y; width; height; kind=`NA }
+    
 (* Adapted from https://gist.github.com/mjackson/5311256 *)
 let hue_to_rgb ~p ~q ~t =
   let t = if t < 0. then t +. 1. else t in

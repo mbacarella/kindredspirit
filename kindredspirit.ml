@@ -118,7 +118,7 @@ module Preview_pane = struct
   let y = 0.
   let width = (display_width -. x) /. 2.0
   let loaded_animation = ref Animation.off
-  let color_picker = { Color_picker.x = x; y; width; height=180.; kind=`NA }
+  let color_picker = Color_picker.create ~x ~y ~width ~height:180.
   let load_animation a model =
     Color_picker.reset color_picker a;
     loaded_animation := Animation.init a model
@@ -131,9 +131,9 @@ end
 module Live_pane = struct
   let x = List_pane.width +. Preview_pane.width
   let y = 0.
-  let loaded_animation = ref Animation.off
   let width = display_width -. x
-  let color_picker = { Color_picker.x = x; y; width; height=180.; kind=`NA }
+  let loaded_animation = ref Animation.off
+  let color_picker = Color_picker.create ~x ~y ~width ~height:180.
   let load_animation_from_preview () =
     let a = !Preview_pane.loaded_animation in
     Color_picker.reset color_picker a;
