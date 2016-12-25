@@ -42,7 +42,7 @@ module Rain = struct
     iter_pixels t ~f:(fun _ vp ->
       vp.Model.Virtual_pixel.color <- Option.value_exn
 	(let coord = vp.Model.Virtual_pixel.coord in
-	 let dist = coord.Model.Coordinate.y -. pos in
+	 let dist = coord.Coordinate.y -. pos in
 	 if dist < 0. then t.secondary_color
 	 else if dist < 1. then t.primary_color
 	 else

@@ -1,11 +1,6 @@
 open Core.Std
 open Async.Std
 
-module Coordinate : sig
-  type t = { x : float; y : float; z : float } with sexp
-  val dist : t -> t -> float
-end
-
 module Virtual_pixel : sig
   type t =
     { controller_id : int
