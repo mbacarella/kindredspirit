@@ -285,7 +285,7 @@ let main () =
 
 let () =
   let cmd =
-    Command.async_basic ~summary:"Pixel Pusher driver"
+    Command.async_basic ~summary:"Kindred Spirit Lighting Console"
       Command.Spec.(empty)
       (fun () -> main ())
   in
