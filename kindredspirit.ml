@@ -199,15 +199,16 @@ let tick () =
      It also saves us from burning 100% CPU (if we don't have to). *)
   (* This algorithm tries to pause a refresh until the next
      1/60th of a second boundary. *)
-  let dec f =
-    let x = Float.to_int f |> Float.of_int in
-    f -. x
+  let span =
+    let dec f =
+      let x = Float.to_int f |> Float.of_int in
+      f -. x
+    in
+    let t = Time.now () |> Time.to_float |> dec in
+    let s = t /. display_interval |> dec in
+    display_interval -. (display_interval *. s)
   in
-  let t = Time.now () |> Time.to_float |> dec in
-  let s = t /. display_interval |> dec in
-  let span = display_interval -. (display_interval *. s) in
-  assert (span <= display_interval);
-  assert (span >= 0.);
+  assert (span >= 0. && span <= display_interval);
   next_display_time := Time.add (Time.now ()) (sec span); 
   Core.Std.Time.pause (sec span);
   Glut.postRedisplay ()
