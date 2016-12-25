@@ -94,12 +94,6 @@ let display_model ~center:(x, y) model =
   GlDraw.ends ();
   GlMat.pop ()
 
-let display_animation ~x a tag =
-  let s = sprintf "%s: %s" tag a.Animation.name in
-  text ~x ~y:(display_height -. 10.) s;
-  a.Animation.update a;
-  display_model ~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model)
-
 let load_colors_from_picker a cp =
   begin match a.Animation.primary_color, Color_picker.get_primary cp with
     | Some _, Some c -> a.Animation.primary_color <- Some c
@@ -113,6 +107,14 @@ let load_colors_from_picker a cp =
     | Some _, None | None, Some _ -> failwithf "broken secondary color picker for '%s'" a.Animation.name ()
   end
 
+let display_animation ~x a tag color_picker =
+  load_colors_from_picker !loaded_animation color_picker;
+  let s = sprintf "%s: %s" tag a.Animation.name in
+  text ~x ~y:(display_height -. 10.) s;
+  a.Animation.update a;
+  display_model ~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model);
+  Color_picker.display color_picker
+
 module Preview_pane = struct
   let x = List_pane.width
   let y = 0.
@@ -123,9 +125,7 @@ module Preview_pane = struct
     Color_picker.reset color_picker a;
     loaded_animation := Animation.init a model
   let display () =
-    load_colors_from_picker !loaded_animation color_picker;
-    display_animation ~x !loaded_animation "preview";
-    Color_picker.display color_picker
+    display_animation ~x !loaded_animation "preview" color_picker;
 end
 
 module Live_pane = struct
@@ -139,9 +139,7 @@ module Live_pane = struct
     Color_picker.reset color_picker a;
     loaded_animation := Animation.init a (Option.value_exn a.Animation.model)
   let display () =
-    load_colors_from_picker !loaded_animation color_picker;
-    display_animation ~x !loaded_animation "live";
-    Color_picker.display color_picker
+    display_animation ~x !loaded_animation "live" color_picker;
 end
 
 let send_frame_to_pixel_pushers a =
