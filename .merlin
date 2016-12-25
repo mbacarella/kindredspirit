@@ -1,6 +1,3 @@
-kindredspirit
-pixel_pusher
-color_picker
-animation
+B _build
 PKG core core_extended async bitstring sexplib lablgl lablgl.glut fftw3
 EXT bitstring sexplib
