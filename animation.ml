@@ -33,8 +33,8 @@ let solid_animation =
   ; primary_color = Some Color.green
   ; secondary_color = None }
 
-let random_noise_animation =
-  { name = "random-noise"
+let noise_animation =
+  { name = "noise"
   ; update = iter_pixels ~f:(fun _t vp -> vp.Model.Virtual_pixel.color <- Color.rand ())
   ; model = None
   ; primary_color = None
@@ -44,4 +44,4 @@ let off = off_animation
 let all =
   [ off_animation
   ; solid_animation
-  ; random_noise_animation ]
+  ; noise_animation ]
