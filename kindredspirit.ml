@@ -6,14 +6,16 @@ let display_height = 834.0
   
 (* Pixel Pushers "guarantee" 60 hz updates.  Set our target FPS to something lower
    so we don't drop packets/clip.  *)
-let target_fps = 50.0
+let target_fps = 60.0
 let display_interval = Time.Span.( / ) (sec 1.0) target_fps
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
 let mouse_x = ref 0.
 let mouse_y = ref 0.
-
+let mouse_down_left = ref false
+let mouse_down_right = ref false
+  
 let reshape ~w ~h =
   (* The actual "world" stays fixed to display_width and display_height
      even if the user resizes. *)
@@ -128,7 +130,7 @@ module Preview_pane = struct
 end
 
 module Live_pane = struct
-  let x = List_pane.width +. Preview_pane.width
+  let x = List_pane.width +. Preview_pane.width +. 10.
   let y = 0.
   let width = display_width -. x
   let loaded_animation = ref Animation.off
@@ -162,8 +164,25 @@ let send_frame_to_pixel_pushers a =
 	    let index = vp.Model.Virtual_pixel.pixel_id in
 	    let color = vp.Model.Virtual_pixel.color in
 	    Pixel_pusher.Strip.set_pixel strip ~color ~index)
-	
-let display () =
+
+let handle_mouse_events model =
+  if !mouse_down_left then begin
+    let x = !mouse_x in
+    let y = display_height -. !mouse_y in
+    Color_picker.maybe_set_primary Preview_pane.color_picker ~x ~y;
+    Color_picker.maybe_set_primary Live_pane.color_picker ~x ~y;
+    Option.iter (List_pane.mouse_over_animation ()) ~f:(fun (_, a) ->
+      Preview_pane.load_animation a model)
+  end;
+  if !mouse_down_right then begin
+    let x = !mouse_x in
+    let y = display_height -. !mouse_y in
+    Color_picker.maybe_set_secondary Preview_pane.color_picker ~x ~y;
+    Color_picker.maybe_set_secondary Live_pane.color_picker ~x ~y
+  end
+
+let display ~model () =
+  handle_mouse_events model;
   GlClear.clear [`color];
   List_pane.display ();
   Preview_pane.display ();
@@ -216,41 +235,24 @@ let tick () =
     Glut.postRedisplay ()
   end
 
-let mouse_clicked ~model ~button ~state ~x ~y =
-  mouse_x := Float.of_int x; mouse_y := Float.of_int y;
-  (*
-    printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
-    (match button with
-      | Glut.LEFT_BUTTON -> "left"
-      | Glut.MIDDLE_BUTTON -> "middle"
-      | Glut.RIGHT_BUTTON -> "right"
-      | Glut.OTHER_BUTTON i -> sprintf "other:%d" i)
-    (match state with
-      | Glut.UP -> "up"
-      | Glut.DOWN -> "down")
-    x y
-  *)
-  let x = !mouse_x in
-  let y = !mouse_y in
-  match button, state with
-  | Glut.LEFT_BUTTON, Glut.DOWN ->
-    begin match List_pane.mouse_over_animation () with
-      | None -> ()
-      | Some (_, a) ->
-	Preview_pane.load_animation a model
-    end;
-    begin
-      let y = display_height -. y in
-      Color_picker.maybe_set_primary Preview_pane.color_picker ~x ~y;
-      Color_picker.maybe_set_primary Live_pane.color_picker ~x ~y
-    end
-  | Glut.RIGHT_BUTTON, Glut.DOWN ->
-    begin
-      let y = display_height -. y in
-      Color_picker.maybe_set_secondary Preview_pane.color_picker ~x ~y;
-      Color_picker.maybe_set_secondary Live_pane.color_picker ~x ~y
-    end
-  | _ -> ()
+let mouse_motion ~x ~y =
+  mouse_x := Float.of_int x;
+  mouse_y := Float.of_int y
+
+let mouse_click_event ~button ~state ~x ~y =
+  mouse_motion ~x ~y;
+  match button with
+    | Glut.RIGHT_BUTTON ->
+      begin match state with
+	| Glut.DOWN -> mouse_down_right := true
+	| Glut.UP -> mouse_down_right := false
+      end
+    | Glut.LEFT_BUTTON ->
+      begin match state with
+	| Glut.DOWN -> mouse_down_left := true
+	| Glut.UP -> mouse_down_left := false
+      end
+    | _ -> ()
 
 let gl_main model =
   let _ = Glut.init ~argv:Sys.argv in
@@ -265,11 +267,12 @@ let gl_main model =
   GlMat.load_identity ();
 
   Glut.reshapeFunc ~cb:reshape;
-  Glut.displayFunc ~cb:display;
+  Glut.displayFunc ~cb:(display ~model);
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
-  Glut.passiveMotionFunc ~cb:(fun ~x ~y -> mouse_x := Float.of_int x; mouse_y := Float.of_int y);
-  Glut.mouseFunc ~cb:(mouse_clicked ~model);
+  Glut.mouseFunc ~cb:mouse_click_event;
+  Glut.motionFunc ~cb:mouse_motion;
+  Glut.passiveMotionFunc ~cb:mouse_motion;
   Glut.mainLoop ()
 
 let main () =
