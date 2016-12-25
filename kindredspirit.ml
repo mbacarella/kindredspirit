@@ -6,8 +6,6 @@ let title = "Kindred Spirit Lighting Console"
 let display_width = 1600.0
 let display_height = 880.0
 
-let target_hz = 70.0 (* this loosely sets the fps *)
-let tick_interval = Time.Span.( / ) (sec 1.0) target_hz
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
@@ -38,18 +36,11 @@ let text ?size ~x ~y s =
   GlMat.pop ()
 
 module Fps = struct
-  let last_update_time = ref Time.epoch
-  let last_update_frames = ref 0.
   let fps = ref 0.
   let display () =
     let now = Time.now () in
-    let span = Time.diff now !last_update_time |> Time.Span.to_sec in
-    if span >= 1.0 then begin
-      let num_display_calls = Float.of_int !num_display_calls in
-      fps := (num_display_calls -. !last_update_frames) /. span;
-      last_update_time := now;
-      last_update_frames := num_display_calls
-    end;
+    let span = Time.Span.to_sec (Time.diff now !last_display_time) in
+    fps := 1.0 /. span;
     text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
 end
  
@@ -216,9 +207,10 @@ let tick () =
      having GLUT do it because this pause call has the important
      side-effect of surrendering time to the Async thread. 
      It also saves us from burning 100% CPU (if we don't have to). *)
-  (* TODO: maybe dynamically shorten or lengthen this pause if we're
-     not hitting an fps target. *)
-  Core.Std.Time.pause tick_interval;
+  (* TODO: dynamically shorten or lengthen span if we're
+     consistently failing to hit 60 fps. *)
+  let span = sec 0.016666 in
+  Core.Std.Time.pause span;
   Glut.postRedisplay ()
 
 let mouse_motion ~x ~y =
