@@ -6,6 +6,7 @@ let title = "Kindred Spirit Lighting Console"
 let display_width = 1600.0
 let display_height = 880.0
 
+let display_interval = 1. /. 60.
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
@@ -35,14 +36,6 @@ let text ?size ~x ~y s =
     Glut.bitmapCharacter ~font ~c) s;
   GlMat.pop ()
 
-module Fps = struct
-  let fps = ref 0.
-  let display () =
-    let now = Time.now () in
-    let span = Time.Span.to_sec (Time.diff now !last_display_time) in
-    fps := 1.0 /. span;
-    text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" !fps)
-end
  
 module List_pane = struct
   let height = 10.
@@ -177,18 +170,47 @@ let handle_mouse_events model =
     Color_picker.maybe_set_secondary Live_pane.color_picker ~x ~y
   end
 
+let next_display_time = ref (Time.now ())
 let display ~model () =
-  handle_mouse_events model;
-  GlClear.clear [`color];
-  List_pane.display ();
-  Preview_pane.display ();
-  Live_pane.display ();
-  Fps.display ();
-  Gl.flush ();
-  Glut.swapBuffers ();
-  send_frame_to_pixel_pushers !Live_pane.loaded_animation;
-  last_display_time := Time.now ();
-  incr num_display_calls
+  if Time.( < ) (Time.now ()) !next_display_time then ()
+  else begin
+    handle_mouse_events model;
+    GlClear.clear [`color];
+    List_pane.display ();
+    Preview_pane.display ();
+    Live_pane.display ();
+    let now = Time.now () in
+    let fps =
+      let span = Time.Span.to_sec (Time.diff now !last_display_time) in
+      1.0 /. span
+    in
+    text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" fps);
+    Gl.flush ();
+    Glut.swapBuffers ();
+    send_frame_to_pixel_pushers !Live_pane.loaded_animation;
+    last_display_time := now;
+    incr num_display_calls
+  end
+    
+let tick () =
+  (* We time the refreshes ourselves via this idle func rather than
+     having GLUT do it because this pause call has the important
+     side-effect of surrendering time to the Async thread. 
+     It also saves us from burning 100% CPU (if we don't have to). *)
+  (* This algorithm tries to pause a refresh until the next
+     1/60th of a second boundary. *)
+  let dec f =
+    let x = Float.to_int f |> Float.of_int in
+    f -. x
+  in
+  let t = Time.now () |> Time.to_float |> dec in
+  let s = t /. display_interval |> dec in
+  let span = display_interval -. (display_interval *. s) in
+  assert (span <= display_interval);
+  assert (span >= 0.);
+  next_display_time := Time.add (Time.now ()) (sec span); 
+  Core.Std.Time.pause (sec span);
+  Glut.postRedisplay ()
 
 let key_input ~key ~x:_ ~y:_ =
   match Char.of_int key with
@@ -201,17 +223,6 @@ let key_input ~key ~x:_ ~y:_ =
       Shutdown.shutdown 0
     | Some char ->
       printf "*** key input: %c\n" char
-
-let tick () =
-  (* We time the refreshes ourselves via this idle func rather than
-     having GLUT do it because this pause call has the important
-     side-effect of surrendering time to the Async thread. 
-     It also saves us from burning 100% CPU (if we don't have to). *)
-  (* TODO: dynamically shorten or lengthen span if we're
-     consistently failing to hit 60 fps. *)
-  let span = sec 0.016666 in
-  Core.Std.Time.pause span;
-  Glut.postRedisplay ()
 
 let mouse_motion ~x ~y =
   mouse_x := Float.of_int x;
