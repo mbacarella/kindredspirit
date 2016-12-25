@@ -6,8 +6,8 @@ let title = "Kindred Spirit Lighting Console"
 let display_width = 1600.0
 let display_height = 880.0
 
-let target_fps = 70.0
-let display_interval = Time.Span.( / ) (sec 1.0) target_fps
+let target_hz = 70.0 (* this loosely sets the fps *)
+let tick_interval = Time.Span.( / ) (sec 1.0) target_hz
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
@@ -211,36 +211,15 @@ let key_input ~key ~x:_ ~y:_ =
     | Some char ->
       printf "*** key input: %c\n" char
 
-
-let set_random_pixels () =
-  List.iter (Pixel_pusher.get_strips ()) ~f:(fun strip ->
-    List.iter (List.range 0 strip.Pixel_pusher.Strip.strip_length) ~f:(fun index ->
-      Pixel_pusher.Strip.set_pixel strip ~color:(Color.rand ())
-	~index))
-
-let tick =
-  let num_ticks = ref 0 in
-  let last_ticks_print_time = ref (Time.now ()) in
-  let last_ticks_print_num = ref 0 in
-  (fun () ->
-    incr num_ticks;
-    if Time.diff (Time.now ()) !last_ticks_print_time > (sec 10.0) then begin
-      printf "%s idle calls: %d ticks/sec, frames: %d\n%!"
-	(Time.now () |> Time.to_string) (!num_ticks - !last_ticks_print_num)
-	!num_display_calls;
-      last_ticks_print_time := Time.now ();
-      last_ticks_print_num := !num_ticks
-    end;
-  (* This no-op sleep is here to make sure GLUT doesn't starve Async. *)
-  (* TODO: we're currently burning 100% cpu by hooking into the glut idle func
-     to give time to async.  Find a way to use GLUT in polling mode, or make
-     the GL/GLU/X11 calls to set up the environment directly. *)
-    Core.Std.Unix.sleep 0;
-    if Time.Span.(>) (Time.diff (Time.now ()) !last_display_time) display_interval then begin
-      set_random_pixels ();
-      Pixel_pusher.send_updates ();
-      Glut.postRedisplay ()
-    end)
+let tick () =
+  (* We time the refreshes ourselves via this idle func rather than
+     having GLUT do it because this pause call has the important
+     side-effect of surrendering time to the Async thread. 
+     It also saves us from burning 100% CPU (if we don't have to). *)
+  (* TODO: maybe dynamically shorten or lengthen this pause if we're
+     not hitting an fps target. *)
+  Core.Std.Time.pause tick_interval;
+  Glut.postRedisplay ()
 
 let mouse_motion ~x ~y =
   mouse_x := Float.of_int x;
