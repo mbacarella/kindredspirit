@@ -19,29 +19,68 @@ let with_model t ~f =
 let iter_pixels ~f =
   with_model ~f:(fun t model -> List.iter model.Model.virtual_pixels ~f:(fun vp -> f t vp))
 
-let off_animation =
-  { name = "off"
-  ; update = (fun _t -> ())
-  ; model = None
-  ; primary_color = None
-  ; secondary_color = None }
-
+let empty = { name="empty"; update=ignore; model=None; primary_color=None; secondary_color=None }
+let off_animation = { empty with name="off" }
+let off = off_animation
+  
 let solid_animation =
-  { name = "solid"
+  { empty with
+    name = "solid"
   ; update = iter_pixels ~f:(fun t vp -> vp.Model.Virtual_pixel.color <- Option.value_exn t.primary_color)
-  ; model = None
-  ; primary_color = Some Color.green
-  ; secondary_color = None }
+  ; primary_color = Some Color.green }
 
 let noise_animation =
-  { name = "noise"
-  ; update = iter_pixels ~f:(fun _t vp -> vp.Model.Virtual_pixel.color <- Color.rand ())
-  ; model = None
-  ; primary_color = None
-  ; secondary_color = None }
-    
-let off = off_animation
+  { empty with
+    name = "noise"
+  ; update = iter_pixels ~f:(fun _t vp -> vp.Model.Virtual_pixel.color <- Color.rand ()) }
+
+module Rain = struct
+  let ticks = ref 0
+  let height = 140.
+  let update t =
+    let pos = height -. (Float.of_int (!ticks mod (Float.to_int height))) in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Model.Virtual_pixel.color <- Option.value_exn
+	(let coord = vp.Model.Virtual_pixel.coord in
+	 let dist = coord.Model.Coordinate.y -. pos in
+	 if dist < 0. then t.secondary_color
+	 else if dist < 1. then t.primary_color
+	 else
+	   Option.map t.primary_color ~f:(Color.shade ~factor:((dist /. height) *. 10.))));
+    incr ticks
+  let animation =
+    { empty with
+      name = "rain"
+    ; update
+    ; primary_color = Some (Color.of_hex_int 0x660E6F)
+    ; secondary_color = Some Color.black }
+end
+
+module Solid_glow = struct
+  let ticks = ref 0
+  let update t =
+    let phase =
+      let phase = Float.of_int (!ticks mod 200) in
+      if phase > 100. then 100. -. (phase -. 100.)
+      else phase
+    in
+    iter_pixels t ~f:(fun _ vp ->
+      let c =
+	Option.value_exn t.primary_color
+        |> Color.shade ~factor:(1.0 -. (phase /. 100.))
+      in
+      vp.Model.Virtual_pixel.color <- c);
+    incr ticks
+  let animation =
+    { empty with
+      name = "solidglow"
+    ; update
+    ; primary_color = Some Color.green }
+end 
+
 let all =
   [ off_animation
   ; solid_animation
-  ; noise_animation ]
+  ; noise_animation
+  ; Rain.animation
+  ; Solid_glow.animation ]
