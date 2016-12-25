@@ -98,8 +98,7 @@ let load_colors_from_picker a cp =
   begin match a.Animation.primary_color, Color_picker.get_primary cp with
     | Some _, Some c -> a.Animation.primary_color <- Some c
     | None, None -> ()
-    | Some _, None -> failwithf "broken primary color picker for '%s' (a)" a.Animation.name ()
-    | None, Some _ -> failwithf "broken primary color picker for '%s' (b)" a.Animation.name ()
+    | Some _, None | None, Some _ -> failwithf "broken primary color picker for '%s'" a.Animation.name ()
   end;
   begin match a.Animation.secondary_color, Color_picker.get_secondary cp with
     | Some _, Some c -> a.Animation.secondary_color <- Some c
@@ -108,7 +107,7 @@ let load_colors_from_picker a cp =
   end
 
 let display_animation ~x a tag color_picker =
-  load_colors_from_picker !loaded_animation color_picker;
+  load_colors_from_picker a color_picker;
   let s = sprintf "%s: %s" tag a.Animation.name in
   text ~x ~y:(display_height -. 10.) s;
   a.Animation.update a;
