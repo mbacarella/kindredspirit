@@ -1,16 +1,6 @@
 open Core.Std
 open Async.Std
 
-module Virtual_pixel = struct
-  type t =
-    { controller_id : int
-    ; strip_id : int
-    ; pixel_id : int
-    ; coord : Coordinate.t
-    ; mutable color : Color.t }
-  with sexp
-end
-  
 module Virtual_strip = struct
   type t =
     { controller_id : int

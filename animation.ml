@@ -26,13 +26,13 @@ let off = off_animation
 let solid_animation =
   { empty with
     name = "solid"
-  ; update = iter_pixels ~f:(fun t vp -> vp.Model.Virtual_pixel.color <- Option.value_exn t.primary_color)
+  ; update = iter_pixels ~f:(fun t vp -> vp.Virtual_pixel.color <- Option.value_exn t.primary_color)
   ; primary_color = Some Color.green }
 
 let noise_animation =
   { empty with
     name = "noise"
-  ; update = iter_pixels ~f:(fun _t vp -> vp.Model.Virtual_pixel.color <- Color.rand ()) }
+  ; update = iter_pixels ~f:(fun _t vp -> vp.Virtual_pixel.color <- Color.rand ()) }
 
 module Rain = struct
   let ticks = ref 0
@@ -40,8 +40,8 @@ module Rain = struct
   let update t =
     let pos = height -. (Float.of_int (!ticks mod (Float.to_int height))) in
     iter_pixels t ~f:(fun _ vp ->
-      vp.Model.Virtual_pixel.color <- Option.value_exn
-	(let coord = vp.Model.Virtual_pixel.coord in
+      vp.Virtual_pixel.color <- Option.value_exn
+	(let coord = vp.Virtual_pixel.coord in
 	 let dist = coord.Coordinate.y -. pos in
 	 if dist < 0. then t.secondary_color
 	 else if dist < 1. then t.primary_color
@@ -69,7 +69,7 @@ module Solid_glow = struct
 	Option.value_exn t.primary_color
         |> Color.shade ~factor:(1.0 -. (phase /. 100.))
       in
-      vp.Model.Virtual_pixel.color <- c);
+      vp.Virtual_pixel.color <- c);
     incr ticks
   let animation =
     { empty with

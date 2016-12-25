@@ -89,8 +89,8 @@ let display_model ~center:(x, y) model =
   GlDraw.point_size 2.0;
   GlDraw.begins `points;
   List.iter model.Model.virtual_pixels ~f:(fun vp ->
-    GlDraw.color (Color.to_gl vp.Model.Virtual_pixel.color);
-    let coord = vp.Model.Virtual_pixel.coord in
+    GlDraw.color (Color.to_gl vp.Virtual_pixel.color);
+    let coord = vp.Virtual_pixel.coord in
     GlDraw.vertex ~x:coord.Coordinate.x ~y:coord.Coordinate.y
       ~z:coord.Coordinate.z ());
   GlDraw.ends ();
@@ -155,14 +155,14 @@ let send_frame_to_pixel_pushers a =
 	  Map.add map ~key ~data:strip)
       in
       List.iter model.Model.virtual_pixels ~f:(fun vp ->
-	let controller_id = vp.Model.Virtual_pixel.controller_id in
-	let strip_id = vp.Model.Virtual_pixel.strip_id in
+	let controller_id = vp.Virtual_pixel.controller_id in
+	let strip_id = vp.Virtual_pixel.strip_id in
 	let key = (controller_id, strip_id) in
 	match Map.find strip_map key with
 	  | None -> ()
 	  | Some strip ->
-	    let index = vp.Model.Virtual_pixel.pixel_id in
-	    let color = vp.Model.Virtual_pixel.color in
+	    let index = vp.Virtual_pixel.pixel_id in
+	    let color = vp.Virtual_pixel.color in
 	    Pixel_pusher.Strip.set_pixel strip ~color ~index)
 
 let handle_mouse_events model =
