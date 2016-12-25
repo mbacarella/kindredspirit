@@ -1,6 +1,8 @@
 open! Core.Std
 open! Async.Std
 
+let title = "Kindred Spirit Lighting Console"
+  
 let display_width = 1600.0
 let display_height = 880.0
 
@@ -255,7 +257,7 @@ let mouse_click_event ~button ~state ~x ~y =
 let gl_main model =
   let _ = Glut.init ~argv:Sys.argv in
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
-  let _ = Glut.createWindow ~title:"Kindred Spirit Lighting Console" in
+  let _ = Glut.createWindow ~title in
 
   Glut.positionWindow ~x:0 ~y:0;
   GlMat.mode `projection;
@@ -285,7 +287,7 @@ let main () =
 
 let () =
   let cmd =
-    Command.async_basic ~summary:"Kindred Spirit Lighting Console"
+    Command.async_basic ~summary:title
       Command.Spec.(empty)
       (fun () -> main ())
   in
