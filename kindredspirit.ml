@@ -100,7 +100,7 @@ let load_colors_from_picker a cp =
 let display_animation ~x a tag color_picker =
   load_colors_from_picker a color_picker;
   let s = sprintf "%s: %s" tag a.Animation.name in
-  text ~x ~y:(display_height -. 10.) s;
+  text ~size:`md ~x ~y:(display_height -. 10.) s;
   a.Animation.update a;
   display_model ~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model);
   Color_picker.display color_picker
