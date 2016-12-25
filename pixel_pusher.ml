@@ -1,5 +1,5 @@
-open! Core.Std
-open! Async.Std
+open Core.Std
+open Async.Std
 
 let discovery_port = 7331
 let command_port = 9897

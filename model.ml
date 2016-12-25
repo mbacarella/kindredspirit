@@ -1,5 +1,5 @@
-open! Core.Std
-open! Async.Std
+open Core.Std
+open Async.Std
 
 module Virtual_strip = struct
   type t =
