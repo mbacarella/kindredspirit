@@ -69,7 +69,8 @@ let display_selections t =
       draw_circle ~x:sx ~y:sy
     | `Primary (x, y) ->
       draw_circle ~x ~y
-	
+
+(* TODO: cache these in a bitmap or something. *)
 let display t =
   begin match t.kind with
     | `NA ->
