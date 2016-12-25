@@ -11,8 +11,8 @@ let display_interval = Time.Span.( / ) (sec 1.0) target_fps
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
-let mouse_x = ref 0
-let mouse_y = ref 0
+let mouse_x = ref 0.
+let mouse_y = ref 0.
 
 let reshape ~w ~h =
   (* The actual "world" stays fixed to display_width and display_height
@@ -56,11 +56,9 @@ module List_pane = struct
   let width = 160.
   let mouse_over_animation () =
     let x = 0. in
-    let mouse_x = Float.of_int !mouse_x in
-    let mouse_y = Float.of_int !mouse_y in
     List.findi Animation.all ~f:(fun i _a ->
       let y = height *. (Float.of_int i) in
-      mouse_x >= x && mouse_x < width && mouse_y >= y && mouse_y < y +. height)
+      !mouse_x >= x && !mouse_x < width && !mouse_y >= y && !mouse_y < y +. height)
   let display () =
     GlDraw.color (0.1, 0.1, 0.1);
     GlDraw.rect (0., 0.) (width, display_height);
@@ -102,24 +100,30 @@ let display_animation ~x a tag =
   a.Animation.update a;
   display_model ~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model)
 
-let color_picker_kind a =
-  match a.Animation.primary_color, a.Animation.secondary_color with
-    | None, None -> `NA
-    | Some _, None -> `Primary (0, 0)
-    | Some _, Some _ -> `Primary_and_secondary ((0, 0), (0, 0))
-    | None, Some _ ->
-      failwithf "animation '%s' has a secondary color but no primary" a.Animation.name ()
+let load_colors_from_picker a cp =
+  begin match a.Animation.primary_color, Color_picker.get_primary cp with
+    | Some _, Some c -> a.Animation.primary_color <- Some c
+    | None, None -> ()
+    | Some _, None -> failwithf "broken primary color picker for '%s' (a)" a.Animation.name ()
+    | None, Some _ -> failwithf "broken primary color picker for '%s' (b)" a.Animation.name ()
+  end;
+  begin match a.Animation.secondary_color, Color_picker.get_secondary cp with
+    | Some _, Some c -> a.Animation.secondary_color <- Some c
+    | None, None -> ()
+    | Some _, None | None, Some _ -> failwithf "broken secondary color picker for '%s'" a.Animation.name ()
+  end
 
 module Preview_pane = struct
   let x = List_pane.width
   let y = 0.
   let width = (display_width -. x) /. 2.0
   let loaded_animation = ref Animation.off
-  let color_picker = { Color_picker.x = x; y; width; height=180.; kind=color_picker_kind !loaded_animation }
+  let color_picker = { Color_picker.x = x; y; width; height=180.; kind=`NA }
   let load_animation a model =
-    color_picker.Color_picker.kind <- color_picker_kind a;
+    Color_picker.reset color_picker a;
     loaded_animation := Animation.init a model
   let display () =
+    load_colors_from_picker !loaded_animation color_picker;
     display_animation ~x !loaded_animation "preview";
     Color_picker.display color_picker
 end
@@ -129,12 +133,13 @@ module Live_pane = struct
   let y = 0.
   let loaded_animation = ref Animation.off
   let width = display_width -. x
-  let color_picker = { Color_picker.x = x; y; width; height=180.; kind=color_picker_kind !loaded_animation }
+  let color_picker = { Color_picker.x = x; y; width; height=180.; kind=`NA }
   let load_animation_from_preview () =
     let a = !Preview_pane.loaded_animation in
-    color_picker.Color_picker.kind <- Preview_pane.color_picker.Color_picker.kind; 
+    Color_picker.reset color_picker a;
     loaded_animation := Animation.init a (Option.value_exn a.Animation.model)
   let display () =
+    load_colors_from_picker !loaded_animation color_picker;
     display_animation ~x !loaded_animation "live";
     Color_picker.display color_picker
 end
@@ -199,7 +204,7 @@ let tick () =
   end
 
 let mouse_clicked ~model ~button ~state ~x ~y =
-  mouse_x := x; mouse_y := y;
+  mouse_x := Float.of_int x; mouse_y := Float.of_int y;
   (*
     printf "*** mouse clicked: button:%s, state:%s, %d %d\n"
     (match button with
@@ -212,14 +217,27 @@ let mouse_clicked ~model ~button ~state ~x ~y =
       | Glut.DOWN -> "down")
     x y
   *)
+  let x = !mouse_x in
+  let y = !mouse_y in
   match button, state with
   | Glut.LEFT_BUTTON, Glut.DOWN ->
     begin match List_pane.mouse_over_animation () with
       | None -> ()
       | Some (_, a) ->
 	Preview_pane.load_animation a model
+    end;
+    begin
+      let y = display_height -. y in
+      Color_picker.maybe_set_primary Preview_pane.color_picker ~x ~y;
+      Color_picker.maybe_set_primary Live_pane.color_picker ~x ~y
     end
-  | _, _ -> ()
+  | Glut.RIGHT_BUTTON, Glut.DOWN ->
+    begin
+      let y = display_height -. y in
+      Color_picker.maybe_set_secondary Preview_pane.color_picker ~x ~y;
+      Color_picker.maybe_set_secondary Live_pane.color_picker ~x ~y
+    end
+  | _ -> ()
 
 let gl_main model =
   let _ = Glut.init ~argv:Sys.argv in
@@ -237,7 +255,7 @@ let gl_main model =
   Glut.displayFunc ~cb:display;
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
-  Glut.passiveMotionFunc ~cb:(fun ~x ~y -> mouse_x := x; mouse_y := y);
+  Glut.passiveMotionFunc ~cb:(fun ~x ~y -> mouse_x := Float.of_int x; mouse_y := Float.of_int y);
   Glut.mouseFunc ~cb:(mouse_clicked ~model);
   Glut.mainLoop ()
 
