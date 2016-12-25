@@ -183,15 +183,12 @@ let display ~model () =
     Preview_pane.display ();
     Live_pane.display ();
     let now = Time.now () in
-    let fps =
-      let span = Time.Span.to_sec (Time.diff now !last_display_time) in
-      1.0 /. span
-    in
+    let fps = 1.0 /. Time.Span.to_sec (Time.diff now !last_display_time) in
+    last_display_time := now;
     text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" fps);
     Gl.flush ();
     Glut.swapBuffers ();
     send_frame_to_pixel_pushers !Live_pane.loaded_animation;
-    last_display_time := now;
     begin
       let now = Time.now () in
       if Time.( > ) now !next_display_time then
