@@ -79,23 +79,28 @@ module List_pane = struct
 	  text ())
 end
 
-let display_model ~center:(x, y) model =
-  GlMat.push ();
-  GlMat.load_identity ();
-  let angle = Float.of_int (!num_display_calls mod 360) in
-  GlMat.translate ~x ~y ();
-  GlMat.rotate ~angle ~x:0. ~y:1.0 ~z:0. ();
-  GlMat.scale ~x:1.5 ~y:1.5 ~z:1.5 ();
-  GlDraw.point_size 2.0;
-  GlDraw.begins `points;
-  List.iter model.Model.virtual_pixels ~f:(fun vp ->
-    GlDraw.color (Color.to_gl vp.Virtual_pixel.color);
-    let coord = vp.Virtual_pixel.coord in
-    GlDraw.vertex ~x:coord.Coordinate.x ~y:coord.Coordinate.y
-      ~z:coord.Coordinate.z ());
-  GlDraw.ends ();
-  GlMat.pop ()
+let rotating = ref true
 
+let display_model =
+  let angle = ref 0. in
+  (fun ~center:(x, y) model ->
+    GlMat.push ();
+    GlMat.load_identity ();
+    if !rotating then
+      angle := Float.of_int ((succ (Float.to_int !angle)) mod 360);
+    GlMat.translate ~x ~y ();
+    GlMat.rotate ~angle:!angle ~x:0. ~y:1.0 ~z:0. ();
+    GlMat.scale ~x:1.5 ~y:1.5 ~z:1.5 ();
+    GlDraw.point_size 2.0;
+    GlDraw.begins `points;
+    List.iter model.Model.virtual_pixels ~f:(fun vp ->
+      GlDraw.color (Color.to_gl vp.Virtual_pixel.color);
+      let coord = vp.Virtual_pixel.coord in
+      GlDraw.vertex ~x:coord.Coordinate.x ~y:coord.Coordinate.y
+	~z:coord.Coordinate.z ());
+    GlDraw.ends ();
+    GlMat.pop ())
+    
 let load_colors_from_picker a cp =
   begin match a.Animation.primary_color, Color_picker.get_primary cp with
     | Some _, Some c -> a.Animation.primary_color <- Some c
@@ -199,6 +204,7 @@ let key_input ~key ~x:_ ~y:_ =
     | None -> printf "wat (key code: %d)\n" key
     | Some '\r' -> Live_pane.load_animation_from_preview ()
     | Some '\n' -> printf "received line feed?!\n"
+    | Some ' ' -> rotating := not !rotating
     | Some 'Q' ->
       printf "*** Shutting down on 'Q' command\n";
       Shutdown.shutdown 0
