@@ -50,9 +50,28 @@ let hsl_iter f =
       f ~h ~s:1.0 ~l
     done
   done
+
+let draw_circle ~x ~y =
+  GlDraw.color (Color.black |> Color.to_gl);
+  GlDraw.line_width 4.;
+  GlDraw.begins `line_loop;
+  GlDraw.vertex ~x:(x -. 5.) ~y:(y -. 5.) ();
+  GlDraw.vertex ~x:(x +. 5.) ~y:(y -. 5.) ();
+  GlDraw.vertex ~x:(x +. 5.) ~y:(y +. 5.) ();
+  GlDraw.vertex ~x:(x -. 5.) ~y:(y +. 5.) ();
+  GlDraw.ends ()
+    
+let display_selections t =
+  match t.kind with
+    | `NA -> ()
+    | `Primary_and_secondary ((px, py), (sx, sy)) ->
+      draw_circle ~x:px ~y:py;
+      draw_circle ~x:sx ~y:sy
+    | `Primary (x, y) ->
+      draw_circle ~x ~y
 	
 let display t =
-  match t.kind with
+  begin match t.kind with
     | `NA ->
       GlDraw.point_size 1.0;
       GlDraw.color (0.9, 0.9, 0.9);
@@ -66,10 +85,14 @@ let display t =
       GlDraw.begins `points;
       hsl_iter (fun ~h ~s ~l ->
 	GlDraw.color (hsl_to_rgb ~h ~l ~s);
-	GlDraw.vertex ~x:(t.x +. t.width *. h) ~y:(t.y +. (t.height *. l)) ()
+	let x = t.x +. t.width *. h in
+	let y = t.y +. t.height *. l in
+	GlDraw.vertex ~x ~y ()
       );
       GlDraw.ends ()
-
+  end;
+  display_selections t
+  
 let get_primary t =
   match t.kind with
     | `NA -> None

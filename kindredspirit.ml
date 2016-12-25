@@ -2,7 +2,7 @@ open! Core.Std
 open! Async.Std
 
 let display_width = 1600.0
-let display_height = 834.0
+let display_height = 880.0
   
 (* Pixel Pushers "guarantee" 60 hz updates.  Set our target FPS to something lower
    so we don't drop packets/clip.  *)
