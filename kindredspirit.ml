@@ -3,10 +3,8 @@ open! Async.Std
 
 let display_width = 1600.0
 let display_height = 880.0
-  
-(* Pixel Pushers "guarantee" 60 hz updates.  Set our target FPS to something lower
-   so we don't drop packets/clip.  *)
-let target_fps = 60.0
+
+let target_fps = 70.0
 let display_interval = Time.Span.( / ) (sec 1.0) target_fps
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch

@@ -127,7 +127,9 @@ let maybe_set_secondary t ~x ~y =
 
 let rgb_to_coord t c =
   let (r, g, b) = Color.to_gl c in
-  let dist (r', g', b') = sqrt ((r' -. r) ** 2. +. (g' -. g) ** 2. +. (b' -. b) ** 2.) in
+  let dist (r', g', b') =
+    sqrt ((r' -. r) ** 2. +. (g' -. g) ** 2. +. (b' -. b) ** 2.)
+  in
   let best =
     let c' = Option.value_exn (color_at_xy_gl t ~x:t.x ~y:t.y) in
     ref (t.x, t.y, dist c')
