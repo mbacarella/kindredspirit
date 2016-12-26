@@ -42,12 +42,16 @@ let color_at_xy t ~x ~y =
     | None -> None
     | Some c -> Some (Color.of_gl c)
 
+let cells_width = 360
+let cells_height = 100
+let cells_total = cells_width * cells_height
+
 let hsl_iter f =
-  for h = 0 to 359; do
-    let h = Float.of_int h /. 360. in
-    for l=0 to 100; do
-      let l = Float.of_int l /. 100. in
-      f ~h ~s:1.0 ~l
+  for h=0 to pred cells_width; do
+    let hn = Float.of_int h /. (Float.of_int cells_width) in
+    for l=0 to pred cells_height; do
+       let ln = Float.of_int l /. (Float.of_int cells_height) in
+      f ~i:(h*cells_height + l) ~h:hn ~s:1.0 ~l:ln
     done
   done
 
@@ -70,7 +74,20 @@ let display_selections t =
     | `Primary (x, y) ->
       draw_circle ~x ~y
 
-(* TODO: cache these in a bitmap or something. *)
+let color_picker_elements =
+  Memo.general (fun (x, y, width, height) ->
+    let colors = Raw.create_static `float ~len:(cells_total * 3) in
+    let vertices = Raw.create_static `float ~len:(cells_total * 2) in
+    let set a i v = Raw.set_float a ~pos:i v in 
+    hsl_iter (fun ~i ~h ~s ~l ->
+      let r, g, b = hsl_to_rgb ~h ~l ~s in
+      set colors (i*3) r;
+      set colors (i*3+1) g;
+      set colors (i*3+2) b;
+      set vertices (i*2) (x +. width *. h);
+      set vertices (i*2+1) (y +. height *. l));
+    colors, vertices)
+
 let display t =
   begin match t.kind with
     | `NA ->
@@ -83,14 +100,13 @@ let display t =
       GlDraw.vertex ~x:(t.x +. t.width) ~y:t.y ();
       GlDraw.ends ()
     | `Primary _ | `Primary_and_secondary _ ->
-      GlDraw.begins `points;
-      hsl_iter (fun ~h ~s ~l ->
-	GlDraw.color (hsl_to_rgb ~h ~l ~s);
-	let x = t.x +. t.width *. h in
-	let y = t.y +. t.height *. l in
-	GlDraw.vertex ~x ~y ()
-      );
-      GlDraw.ends ()
+      let colors, vertices = color_picker_elements (t.x, t.y, t.width, t.height) in
+      GlArray.color `three colors;
+      GlArray.vertex `two vertices;
+      GlArray.enable `color;
+      GlArray.enable `vertex;
+      GlDraw.point_size 2.0;
+      GlArray.draw_arrays `points ~first:0 ~count:cells_total
   end;
   display_selections t
   
@@ -135,7 +151,7 @@ let rgb_to_coord t c =
     let c' = Option.value_exn (color_at_xy_gl t ~x:t.x ~y:t.y) in
     ref (t.x, t.y, dist c')
   in
-  hsl_iter (fun ~h ~s ~l ->
+  hsl_iter (fun ~i:_ ~h ~s ~l ->
     let dist' = dist (hsl_to_rgb ~h ~s ~l) in
     let (_, _, dist) = !best in
     if dist' < dist then

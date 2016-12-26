@@ -109,7 +109,7 @@ let display_animation ~x a tag color_picker =
 module Preview_pane = struct
   let x = List_pane.width
   let y = 0.
-  let width = (display_width -. x) /. 2.0
+  let width = (display_width -. x) /. 2.0 -. 5.
   let loaded_animation = ref Animation.off
   let color_picker = Color_picker.create ~x ~y ~width ~height:180.
   let load_animation a model =
@@ -122,7 +122,7 @@ end
 module Live_pane = struct
   let x = List_pane.width +. Preview_pane.width +. 10.
   let y = 0.
-  let width = display_width -. x
+  let width = display_width -. x 
   let loaded_animation = ref Animation.off
   let color_picker = Color_picker.create ~x ~y ~width ~height:180.
   let load_animation_from_preview () =
