@@ -252,6 +252,8 @@ let gl_main model =
   GlMat.mode `modelview;
   GlMat.load_identity ();
 
+  Color_picker.gl_init ();
+
   Glut.reshapeFunc ~cb:reshape;
   Glut.displayFunc ~cb:(display ~model);
   Glut.idleFunc ~cb:(Some tick);

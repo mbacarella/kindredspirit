@@ -1,5 +1,9 @@
 open Core.Std
 
+let gl_init () =
+  GlArray.enable `color;
+  GlArray.enable `vertex
+
 type pos = float * float
 type t =
     { x : float
@@ -103,8 +107,6 @@ let display t =
       let colors, vertices = color_picker_elements (t.x, t.y, t.width, t.height) in
       GlArray.color `three colors;
       GlArray.vertex `two vertices;
-      GlArray.enable `color;
-      GlArray.enable `vertex;
       GlDraw.point_size 2.0;
       GlArray.draw_arrays `points ~first:0 ~count:cells_total
   end;
