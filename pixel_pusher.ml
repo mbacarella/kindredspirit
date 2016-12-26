@@ -1,6 +1,8 @@
 open Core.Std
 open Async.Std
 
+(* Pixel pushers claim to be able to update at 60hz. *)
+let hz = 50.
 let discovery_port = 7331
 let command_port = 9897
 
@@ -40,7 +42,7 @@ module Beacon = struct
       ; strips_attached : int
       ; max_strips_per_packet : int
       ; pixels_per_strip : int
-      ; update_period : Time.Span.t
+v      ; update_period : Time.Span.t
       ; power_total : int (* in PWM units *)
       ; delta_sequence : int (* diff between received and expected sequence numbers *)
       ; controller_ordinal : int
@@ -115,7 +117,7 @@ module Beacon = struct
 	; delta_sequence = to_int delta_sequence ; controller_ordinal = to_int controller_ordinal 
 	; group_ordinal = to_int group_ordinal; my_port; strip_info; protected; fixed_size
 	; last_driven_ip; last_driven_port }
-end
+vend
 
 module Strip = struct
   type t =
@@ -235,8 +237,12 @@ let rec update_loop () =
     send_pixels_to_pushers ();
     updates_to_send := false
   end;
-  Clock.after (sec 0.02) >>= fun () ->
+  (* TODO: turn updates_to_send into a deferred *)
+  Clock.after (sec (1.0 /. hz)) >>= fun () ->
   update_loop ()
+    
+let send_updates () =
+  updates_to_send := true
 
 let get_strips () =
   !Pusher_state.strips
@@ -279,6 +285,3 @@ let start_discovery_listener () =
 		  ; last_command = Time.epoch
 		  ; socket = Core.Std.Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0) };
 	  Pusher_state.update ())
-
-let send_updates () =
-  updates_to_send := true
