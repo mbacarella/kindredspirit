@@ -59,7 +59,7 @@ let hsl_iter f =
     done
   done
 
-let draw_circle ~x ~y =
+let draw_square ~x ~y =
   GlDraw.color (Color.black |> Color.to_gl);
   GlDraw.line_width 4.;
   GlDraw.begins `line_loop;
@@ -73,10 +73,10 @@ let display_selections t =
   match t.kind with
     | `NA -> ()
     | `Primary_and_secondary ((px, py), (sx, sy)) ->
-      draw_circle ~x:px ~y:py;
-      draw_circle ~x:sx ~y:sy
+      draw_square ~x:px ~y:py;
+      draw_square ~x:sx ~y:sy
     | `Primary (x, y) ->
-      draw_circle ~x ~y
+      draw_square ~x ~y
 
 let color_picker_elements =
   Memo.general (fun (x, y, width, height) ->
