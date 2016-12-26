@@ -137,13 +137,7 @@ let send_frame_to_pixel_pushers a =
   match a.Animation.model with
     | None -> failwithf "animation %s is not initiatilized" a.Animation.name ()
     | Some model ->
-      let strip_map =
-	List.fold_left (Pixel_pusher.get_strips ()) ~init:Map.Poly.empty ~f:(fun map strip ->
-	  let controller_id = strip.Pixel_pusher.Strip.controller_id in
-	  let strip_id = strip.Pixel_pusher.Strip.strip_number in
-	  let key = (controller_id, strip_id) in
-	  Map.add map ~key ~data:strip)
-      in
+      let strip_map = Pixel_pusher.get_strips_as_map () in
       List.iter model.Model.virtual_pixels ~f:(fun vp ->
 	let controller_id = vp.Virtual_pixel.controller_id in
 	let strip_id = vp.Virtual_pixel.strip_id in

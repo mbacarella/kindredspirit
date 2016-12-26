@@ -138,6 +138,7 @@ module Pusher_state = struct
       ; socket      : Core.Std.Unix.File_descr.t }
   let known_pushers = String.Table.create ()
   let strips = ref []
+  let strips_map = ref Map.Poly.empty
   let update () =
     let strips' =
       Hashtbl.fold known_pushers ~init:[] ~f:(fun ~key:_ ~data acc ->
@@ -149,7 +150,15 @@ module Pusher_state = struct
 	  ; group_id = beacon.Beacon.group_ordinal
 	  ; matrix = data.matrix } :: acc))
     in
-    strips := strips'
+    let strips_map' =
+      List.fold_left strips' ~init:Map.Poly.empty ~f:(fun map strip ->
+	let controller_id = strip.Strip.controller_id in
+	let strip_id = strip.Strip.strip_number in
+	let key = (controller_id, strip_id) in
+	Map.add map ~key ~data:strip)
+    in
+    strips := strips';
+    strips_map := strips_map'
 end
 
 let send_now_or_soon pusher sendfun =
@@ -231,7 +240,10 @@ let rec update_loop () =
 
 let get_strips () =
   !Pusher_state.strips
-
+    
+let get_strips_as_map () =
+  !Pusher_state.strips_map
+    
 let start_discovery_listener () =
   don't_wait_for (update_loop ());
   printf "*** Starting Pixel Pusher listener on port %d...\n%!" discovery_port;

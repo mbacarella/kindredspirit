@@ -27,6 +27,9 @@ end
 (* Returns all strips seen by the subsystem. *)
 val get_strips : unit -> Strip.t list
 
+(* Like get_strips, but strips are indexed by (controller_id, strip_id) *)
+val get_strips_as_map : unit -> (int * int, Strip.t) Map.Poly.t
+
 (* Begins watching for Pixel Pusher presence UDP broadcasts.
    Wrap this in a don't_wait_for because it never becomes
    determined. *)
