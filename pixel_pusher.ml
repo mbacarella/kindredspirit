@@ -42,7 +42,7 @@ module Beacon = struct
       ; strips_attached : int
       ; max_strips_per_packet : int
       ; pixels_per_strip : int
-v      ; update_period : Time.Span.t
+      ; update_period : Time.Span.t
       ; power_total : int (* in PWM units *)
       ; delta_sequence : int (* diff between received and expected sequence numbers *)
       ; controller_ordinal : int
@@ -117,7 +117,7 @@ v      ; update_period : Time.Span.t
 	; delta_sequence = to_int delta_sequence ; controller_ordinal = to_int controller_ordinal 
 	; group_ordinal = to_int group_ordinal; my_port; strip_info; protected; fixed_size
 	; last_driven_ip; last_driven_port }
-vend
+end
 
 module Strip = struct
   type t =
@@ -129,7 +129,7 @@ module Strip = struct
   let set_pixel t ~color ~index =
    t.matrix.(t.strip_number * t.strip_length + index) <- color
 end
-  
+
 module Pusher_state = struct
   type t =
       { beacon_time : Time.t
@@ -181,8 +181,7 @@ let send_now_or_soon pusher sendfun =
       pusher.Pusher_state.last_command <- run_at;
       don't_wait_for (Clock.at run_at >>| sendfun)
     end
-  end
-  
+  end  
 
 let send_pixels_to_pushers () =
   Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:ip ~data:pusher ->
@@ -240,16 +239,16 @@ let rec update_loop () =
   (* TODO: turn updates_to_send into a deferred *)
   Clock.after (sec (1.0 /. hz)) >>= fun () ->
   update_loop ()
-    
+
 let send_updates () =
   updates_to_send := true
 
 let get_strips () =
   !Pusher_state.strips
-    
+
 let get_strips_as_map () =
   !Pusher_state.strips_map
-    
+
 let start_discovery_listener () =
   don't_wait_for (update_loop ());
   printf "*** Starting Pixel Pusher listener on port %d...\n%!" discovery_port;
