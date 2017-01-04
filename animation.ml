@@ -39,6 +39,7 @@ module Rain = struct
   let height = 140.
   let update t =
     let pos = height -. (Float.of_int (!ticks mod (Float.to_int height))) in
+    assert (pos > 0.);
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
 	(let coord = vp.Virtual_pixel.coord in

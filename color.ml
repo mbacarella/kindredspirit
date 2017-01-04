@@ -26,7 +26,8 @@ let shade t ~factor =
     f t.r, f t.g, f t.b
   in
   let i = Float.to_int in
+  let m x = max (i x) 0 in
   let shade = 1.0 -. factor in
-  { r = i (r *. shade)
-  ; g = i (g *. shade)
-  ; b = i (b *. shade) }
+  { r = m (r *. shade)
+  ; g = m (g *. shade)
+  ; b = m (b *. shade) }
