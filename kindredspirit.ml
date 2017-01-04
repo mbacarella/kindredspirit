@@ -147,7 +147,8 @@ let send_frame_to_pixel_pushers a =
 	  | Some strip ->
 	    let index = vp.Virtual_pixel.pixel_id in
 	    let color = vp.Virtual_pixel.color in
-	    Pixel_pusher.Strip.set_pixel strip ~color ~index)
+	    Pixel_pusher.Strip.set_pixel strip ~color ~index);
+      Pixel_pusher.send_updates ()
 
 let handle_mouse_events model =
   if !mouse_down_left then begin
