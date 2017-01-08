@@ -4,6 +4,8 @@ type t = { r: int; g: int; b: int } with sexp
 let black = { r=0; g=0; b=0 }
 let white = { r=255; g=255; b=255 }
 let green = { r=0; g=255; b=0 }
+let red = { r=255; g=0; b=0 }
+let blue = { r=0; g=0; b=255 }
 let of_hex_int i =
   { r=(i lsr 16) land 0xFF
   ; g=(i lsr 8) land 0xFF
@@ -31,3 +33,12 @@ let shade t ~factor =
   { r = m (r *. shade)
   ; g = m (g *. shade)
   ; b = m (b *. shade) }
+
+let of_string = function
+  | "white" -> white
+  | "black" -> black
+  | "green" -> green
+  | "red" -> red
+  | "blue" -> blue
+  | "rand" -> rand ()
+  | s -> failwithf "Color.of_string: unknown color: %s" s ()
