@@ -6,7 +6,7 @@ let title = "Kindred Spirit Lighting Console"
 let display_width = 1600.0
 let display_height = 880.0
 
-let target_fps = 60.
+let target_fps = 50.
 let display_interval = sec (1. /. target_fps)
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
