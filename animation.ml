@@ -65,7 +65,7 @@ module Solid_glow = struct
       if phase > 100. then 100. -. (phase -. 100.)
       else phase
     in
-    (* XXX: drops out too fast near the end *)
+    (* TODO: drops out too fast near the end *)
     iter_pixels t ~f:(fun _ vp ->
       let c =
 	Option.value_exn t.primary_color

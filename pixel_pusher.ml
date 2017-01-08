@@ -245,11 +245,11 @@ let setup_refresh_loop_for_non_async read_fd =
 type send_updates_t = Core.Std.Unix.File_descr.t
     
 let send_updates _send_updates_t =
-  (* XXX: go boom if this is called from a non-async thread *)
+  (* TODO: go boom if this is called from a non-async thread *)
   send_pixels_to_pushers ()
 
 let send_updates_from_non_async_thread fd =
-  (* XXX: go boom if this is called from an async thread *)
+  (* TODO: go boom if this is called from an async thread *)
   let buf = "r" in
   if Core.Std.Unix.write fd ~buf ~pos:0 ~len:1 <> 1 then
     failwithf "couldn't write one char to update fd" ()
@@ -299,5 +299,5 @@ let start () =
   let read_fd, write_fd = Core.Std.Unix.pipe () in
   don't_wait_for (setup_refresh_loop_for_non_async read_fd);
   don't_wait_for (start_discovery_listener ());
-  (* XXX: drop pushers that haven't been seen in awhile *)
+  (* TODO: drop pushers that haven't been seen in awhile *)
   return write_fd
