@@ -133,7 +133,7 @@ module Live_pane = struct
     display_animation ~x !loaded_animation "live" color_picker;
 end
 
-let send_frame_to_pixel_pushers a =
+let send_frame_to_pixel_pushers a send_updates_t =
   match a.Animation.model with
     | None -> failwithf "animation %s is not initiatilized" a.Animation.name ()
     | Some model ->
@@ -148,7 +148,7 @@ let send_frame_to_pixel_pushers a =
 	    let index = vp.Virtual_pixel.pixel_id in
 	    let color = vp.Virtual_pixel.color in
 	    Pixel_pusher.Strip.set_pixel strip ~color ~index);
-      Pixel_pusher.send_updates ()
+      Pixel_pusher.send_updates_from_non_async_thread send_updates_t
 
 let handle_mouse_events model =
   if !mouse_down_left then begin
@@ -167,7 +167,7 @@ let handle_mouse_events model =
   end
 
 let next_display_time = ref (Time.now ())
-let display ~model () =
+let display ~model ~send_updates_t () =
   if Time.( < ) (Time.now ()) !next_display_time then ()
   else begin
     let start_display_time = Time.now () in
@@ -183,7 +183,7 @@ let display ~model () =
     text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" fps);
     Gl.flush ();
     Glut.swapBuffers ();
-    send_frame_to_pixel_pushers !Live_pane.loaded_animation;
+    send_frame_to_pixel_pushers !Live_pane.loaded_animation send_updates_t;
     begin
       let now = Time.now () in
       if Time.( > ) now !next_display_time then
@@ -235,7 +235,7 @@ let mouse_click_event ~button ~state ~x ~y =
       end
     | _ -> ()
 
-let gl_main model =
+let gl_main model send_updates_t =
   let _ = Glut.init ~argv:Sys.argv in
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
   let _ = Glut.createWindow ~title in
@@ -250,7 +250,7 @@ let gl_main model =
   Color_picker.gl_init ();
 
   Glut.reshapeFunc ~cb:reshape;
-  Glut.displayFunc ~cb:(display ~model);
+  Glut.displayFunc ~cb:(display ~model ~send_updates_t);
   Glut.idleFunc ~cb:(Some tick);
   Glut.keyboardFunc ~cb:key_input;
   Glut.mouseFunc ~cb:mouse_click_event;
@@ -259,14 +259,13 @@ let gl_main model =
   Glut.mainLoop ()
 
 let main () =
-  don't_wait_for begin
-    Model.load "model.csv"
-    >>= fun model ->
-    Preview_pane.loaded_animation := (Animation.init Animation.off model);
-    Live_pane.loaded_animation := (Animation.init Animation.off model);
-    In_thread.run (fun () -> gl_main model)
-  end;
-  Pixel_pusher.start_discovery_listener ()
+  Pixel_pusher.start ()
+  >>= fun send_updates_t ->
+  Model.load "model.csv"
+  >>= fun model ->
+  Preview_pane.loaded_animation := (Animation.init Animation.off model);
+  Live_pane.loaded_animation := (Animation.init Animation.off model);
+  In_thread.run (fun () -> gl_main model send_updates_t)
 
 let () =
   let cmd =

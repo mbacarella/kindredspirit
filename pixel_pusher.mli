@@ -30,11 +30,15 @@ val get_strips : unit -> Strip.t list
 (* Like get_strips, but strips are indexed by (controller_id, strip_id) *)
 val get_strips_as_map : unit -> (int * int, Strip.t) Map.Poly.t
 
-(* Begins watching for Pixel Pusher presence UDP broadcasts.
-   Wrap this in a don't_wait_for because it never becomes
-   determined. *)
-val start_discovery_listener : unit -> unit Deferred.t
+type send_updates_t
+  
+(* Begins watching for Pixel Pusher presence UDP broadcasts.  *)
+val start : unit -> send_updates_t Deferred.t
 
 (* Instructs subsystem to release any pending updates.
-   Do this every time you've finished creating your "frame". *) 
-val send_updates : unit -> unit
+   Do this every time you've finished creating your "frame". 
+   You can only call this from async. *) 
+val send_updates : send_updates_t -> unit
+
+(* Same as above, but for calling from inside of an In_thread (such as the glut display func) *)
+val send_updates_from_non_async_thread : send_updates_t -> unit

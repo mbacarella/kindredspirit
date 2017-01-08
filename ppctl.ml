@@ -3,23 +3,44 @@ open Async.Std
 
 let summary = "Pixel Pusher control util"
 
-let main color () =
-  don't_wait_for (Pixel_pusher.start_discovery_listener ());
+let iter_pixels f =
+  List.iter (Pixel_pusher.get_strips ()) ~f:(fun strip ->
+    List.iter (List.range 0 strip.Pixel_pusher.Strip.strip_length) ~f:(fun index ->
+      f strip index))
+
+let iter_pixels_set_color f =
+  iter_pixels (fun strip index ->
+    Pixel_pusher.Strip.set_pixel strip ~color:(f ()) ~index)
+
+let pp_basic f =
+  Pixel_pusher.start ()
+  >>= fun uph ->
   let rec loop () =
-    List.iter (Pixel_pusher.get_strips ()) ~f:(fun strip ->
-      List.iter (List.range 0 strip.Pixel_pusher.Strip.strip_length) ~f:(fun index ->
-	Pixel_pusher.Strip.set_pixel strip ~color:(Color.of_string color) ~index));
-    Pixel_pusher.send_updates ();
-    Clock.after (sec 0.016) >>= fun () ->
-    loop ()
+    f ();
+    Pixel_pusher.send_updates uph;
+    Clock.after (sec 0.02) >>= loop
   in
   loop ()
     
+module Set = struct
+  module All = struct
+    let set_all ~color =
+      ignore (Color.of_string color); (* fail early in case this color is invalid *)
+      pp_basic (fun () -> iter_pixels_set_color (fun () -> Color.of_string color))
+
+    let cmd =
+      Command.async_basic ~summary:"set all LEDs on all strips"
+	Command.Spec.(empty +> anon ("color" %: string))
+	(fun color () -> set_all ~color)
+  end
+  let cmd =
+    Command.group ~summary:"set strip(s) to a color"
+      [ "all", All.cmd ]
+end
+  
 let () =
   let cmd =
-    Command.async_basic ~summary
-      Command.Spec.(
-	empty +> flag "-color" (required string) ~doc:" hex or color name")
-      (fun color () -> main color ())
+    Command.group ~summary:"Pixel Pusher control util"
+      [ "set", Set.cmd ]
   in
   Command.run cmd

@@ -1,8 +1,6 @@
 open Core.Std
 open Async.Std
 
-(* Pixel pushers claim to be able to update at 60hz. *)
-let hz = 50.
 let discovery_port = 7331
 let command_port = 9897
 
@@ -229,20 +227,33 @@ let send_pixels_to_pushers () =
 	    bytes_sent ip (String.length buf - bytes_sent) ()));
     pusher.Pusher_state.seq <- pusher.Pusher_state.seq + (List.length stripss))
 
-let updates_to_send = ref false
-  
-let rec update_loop () =
-  if !updates_to_send then begin
-    send_pixels_to_pushers ();
-    updates_to_send := false
-  end;
-  (* TODO: turn updates_to_send into a deferred *)
-  Clock.after (sec (1.0 /. hz)) >>= fun () ->
-  update_loop ()
+let setup_refresh_loop_for_non_async read_fd =
+  let rec wait_for_refresh fd =
+    Reader.read_char fd >>= fun event ->
+    match event with
+      | `Eof -> failwithf "wait_for_refresh: unexpected eof!" ()
+      | `Ok 'r' ->
+	send_pixels_to_pushers ();
+	wait_for_refresh fd
+      | `Ok char ->
+	failwithf "wait_for_refresh: unexpected char: %c" char ()
+  in
+  let fd = Fd.create Fd.Kind.Fifo read_fd (Info.of_string "nurple") in
+  Fd.clear_nonblock fd;
+  wait_for_refresh (Reader.create fd)  
 
-let send_updates () =
-  updates_to_send := true
+type send_updates_t = Core.Std.Unix.File_descr.t
+    
+let send_updates _send_updates_t =
+  (* XXX: go boom if this is called from a non-async thread *)
+  send_pixels_to_pushers ()
 
+let send_updates_from_non_async_thread fd =
+  (* XXX: go boom if this is called from an async thread *)
+  let buf = "r" in
+  if Core.Std.Unix.write fd ~buf ~pos:0 ~len:1 <> 1 then
+    failwithf "couldn't write one char to update fd" ()
+      
 let get_strips () =
   !Pusher_state.strips
 
@@ -250,7 +261,6 @@ let get_strips_as_map () =
   !Pusher_state.strips_map
 
 let start_discovery_listener () =
-  don't_wait_for (update_loop ());
   printf "*** Starting Pixel Pusher listener on port %d...\n%!" discovery_port;
   let addr = `Inet (Unix.Inet_addr.bind_any, discovery_port) in
   Async_extra.Udp.bind addr
@@ -284,3 +294,10 @@ let start_discovery_listener () =
 		  ; last_command = Time.epoch
 		  ; socket = Core.Std.Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0) };
 	  Pusher_state.update ())
+
+let start () =
+  let read_fd, write_fd = Core.Std.Unix.pipe () in
+  don't_wait_for (setup_refresh_loop_for_non_async read_fd);
+  don't_wait_for (start_discovery_listener ());
+  (* XXX: drop pushers that haven't been seen in awhile *)
+  return write_fd
