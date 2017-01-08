@@ -9,6 +9,12 @@
   This module listens for Pixel Pushers to announce themselves, remembers
   them, and provides an interface for telling a pixel on a strip
   to turn to a color.
+
+  Threads: while the module does not explicitly use threads, it does require the Async
+  scheduler to be alive and active to handle background tasks, such as listening for
+  beacons and staggering packets sent to pushers.  The module hides
+  (jane) Async and will starve if your application doesn't frequently yield the
+  UNIX scheduler (e.g. by calling UNIX sleep until the next display tick).
 *)
 
 open Core.Std
