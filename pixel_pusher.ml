@@ -28,8 +28,7 @@ module Beacon = struct
 	  { rgbow; widepixels; logarithmic; motion; notidempotent }
   end
   type t =
-      { timestamp : Time.t
-      ; mac_address : string
+      { mac_address : string
       ; ip_address  : string
       ; device_type : int
       ; protocol_version : int
@@ -110,8 +109,7 @@ module Beacon = struct
 	  (* comes over the wire in microseconds *)
 	  Time.Span.of_ms (Int32.to_float update_period /. 1000.0)
 	in
-	let timestamp = Time.now () in
-	{ timestamp; mac_address; ip_address; device_type; protocol_version; vendor_id; product_id
+	{ mac_address; ip_address; device_type; protocol_version; vendor_id; product_id
 	; hw_revision; sw_revision; link_speed = to_int link_speed; strips_attached; max_strips_per_packet
 	; pixels_per_strip; update_period; power_total = to_int power_total
 	; delta_sequence = to_int delta_sequence ; controller_ordinal = to_int controller_ordinal 
@@ -167,8 +165,8 @@ module Pusher_state = struct
     let now = Time.now () in
     let drop =
       Hashtbl.fold known_pushers ~init:[] ~f:(fun ~key ~data acc ->
-	let beacon = data.beacon in
-	if Time.Span.(>) (Time.diff now beacon.Beacon.timestamp) threshold
+	let timestamp = data.beacon_time in
+	if Time.Span.(>) (Time.diff now timestamp) threshold
 	then key :: acc
 	else acc)
     in
