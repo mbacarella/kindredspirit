@@ -28,7 +28,8 @@ module Beacon = struct
 	  { rgbow; widepixels; logarithmic; motion; notidempotent }
   end
   type t =
-      { mac_address : string
+      { timestamp : Time.t
+      ; mac_address : string
       ; ip_address  : string
       ; device_type : int
       ; protocol_version : int
@@ -109,9 +110,10 @@ module Beacon = struct
 	  (* comes over the wire in microseconds *)
 	  Time.Span.of_ms (Int32.to_float update_period /. 1000.0)
 	in
-	{ mac_address ; ip_address ; device_type ; protocol_version ; vendor_id ; product_id
-	; hw_revision ; sw_revision ; link_speed = to_int link_speed ; strips_attached ; max_strips_per_packet
-	; pixels_per_strip ; update_period ; power_total = to_int power_total
+	let timestamp = Time.now () in
+	{ timestamp; mac_address; ip_address; device_type; protocol_version; vendor_id; product_id
+	; hw_revision; sw_revision; link_speed = to_int link_speed; strips_attached; max_strips_per_packet
+	; pixels_per_strip; update_period; power_total = to_int power_total
 	; delta_sequence = to_int delta_sequence ; controller_ordinal = to_int controller_ordinal 
 	; group_ordinal = to_int group_ordinal; my_port; strip_info; protected; fixed_size
 	; last_driven_ip; last_driven_port }
@@ -159,6 +161,23 @@ module Pusher_state = struct
     in
     strips := strips';
     strips_map := strips_map'
+      
+  let drop_missing_pushers () =
+    let threshold = sec 60. in
+    let now = Time.now () in
+    let drop =
+      Hashtbl.fold known_pushers ~init:[] ~f:(fun ~key ~data acc ->
+	let beacon = data.beacon in
+	if Time.Span.(>) (Time.diff now beacon.Beacon.timestamp) threshold
+	then key :: acc
+	else acc)
+    in
+    List.iter drop ~f:(fun key ->
+      printf "*** Forgetting about Pixel Pusher %s, hasn't been seen in awhile (>%s)\n%!"
+	key (Time.Span.to_string threshold);
+      Hashtbl.remove known_pushers key);
+    if List.length drop > 0 then
+      update ()
 end
 
 let send_now_or_soon pusher sendfun =
@@ -299,5 +318,5 @@ let start () =
   let read_fd, write_fd = Core.Std.Unix.pipe () in
   don't_wait_for (setup_refresh_loop_for_non_async read_fd);
   don't_wait_for (start_discovery_listener ());
-  (* TODO: drop pushers that haven't been seen in awhile *)
+  Clock.every (sec 1.) Pusher_state.drop_missing_pushers;
   return write_fd
