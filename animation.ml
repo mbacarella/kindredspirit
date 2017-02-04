@@ -80,9 +80,32 @@ module Solid_glow = struct
     ; primary_color = Some Color.green }
 end 
 
-let all =
+let live_all =
   [ off_animation
   ; solid_animation
   ; noise_animation
   ; Rain.animation
   ; Solid_glow.animation ]
+
+let test_all () =
+  off_animation :: List.concat_map (List.range 0 8) ~f:(fun controller_id ->
+    List.map (List.range 0 8) ~f:(fun strip_id ->
+      let name = sprintf "test-%d:%d" controller_id strip_id in
+      let update t =
+	iter_pixels t ~f:(fun _ vp ->
+	  vp.Virtual_pixel.color <-
+	    if vp.Virtual_pixel.controller_id = controller_id
+            && vp.Virtual_pixel.strip_id = strip_id
+	    then Option.value_exn t.primary_color
+	    else Option.value_exn t.secondary_color)
+      in
+      { empty with name; update
+      ; primary_color = Some Color.white
+      ; secondary_color = Some Color.black }))
+
+let mode = ref `live
+  
+let all = Memo.unit (fun () ->
+  match !mode with
+    | `live -> live_all
+    | `test -> test_all ())

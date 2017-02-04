@@ -43,7 +43,7 @@ module List_pane = struct
   let width = 160.
   let mouse_over_animation () =
     let x = 0. in
-    List.findi Animation.all ~f:(fun i _a ->
+    List.findi (Animation.all ()) ~f:(fun i _a ->
       let y = height *. (Float.of_int i) in
       !mouse_x >= x && !mouse_x < width && !mouse_y >= y && !mouse_y < y +. height)
   let display () =
@@ -51,7 +51,7 @@ module List_pane = struct
     GlDraw.rect (0., 0.) (width, display_height);
     let x = 0. in
     let hovered_a = mouse_over_animation () in
-    List.iteri Animation.all ~f:(fun i a ->
+    List.iteri (Animation.all ()) ~f:(fun i a ->
       let y = display_height -. (height *. (Float.of_int (i+1))) in
       let text () = text ~x ~y a.Animation.name in
       match hovered_a with
@@ -270,7 +270,10 @@ let main () =
 let () =
   let cmd =
     Command.async_basic ~summary:title
-      Command.Spec.(empty)
-      (fun () -> main ())
+      Command.Spec.(empty +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power")
+      (fun test_animations () ->
+	if test_animations then
+	  Animation.mode := `test;
+	main ())
   in
   Command.run cmd

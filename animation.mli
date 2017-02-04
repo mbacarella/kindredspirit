@@ -9,7 +9,10 @@ val init : t -> Model.t -> t
   
 (* Exposed because it's the null animation. *)
 val off : t
-  
+
+(* set to `test for test animations; default: `live *)    
+val mode : [`live | `test] ref
+
 (* All animations available. *)
-val all : t list
+val all : unit -> t list
   
