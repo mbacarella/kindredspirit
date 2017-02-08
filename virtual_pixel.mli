@@ -7,3 +7,4 @@ type t =
   ; coord : Coordinate.t
   ; mutable color : Color.t }
 with sexp
+  
