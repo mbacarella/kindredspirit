@@ -80,12 +80,38 @@ module Solid_glow = struct
     ; primary_color = Some Color.green }
 end 
 
+module Solid_rainbow = struct
+  let c = ref Color.{ r=255; g=0; b=0 }
+  let dec_color = ref 0
+  let inc_color = ref 1
+  let i = ref 0
+  let update t =
+    if !i > 255 then begin
+      dec_color := (succ !dec_color) mod 3;
+      inc_color := if !dec_color = 2 then 0 else succ !dec_color;
+      i := 0
+    end else incr i;
+    let step_color c pos f =
+      match pos with
+	| 0 -> { c with Color.r = f c.Color.r }
+	| 1 -> { c with Color.g = f c.Color.g }
+	| 2 -> { c with Color.b = f c.Color.b }
+	| _ -> failwithf "step_color: bad pos: %d" pos ()
+    in
+    c := step_color !c !dec_color pred;
+    c := step_color !c !inc_color succ;
+    iter_pixels t ~f:(fun _ vp -> vp.Virtual_pixel.color <- !c)
+  let animation =
+    { empty with name = "solidrainbow"; update }
+end
+  
 let live_all =
   [ off_animation
   ; solid_animation
   ; noise_animation
   ; Rain.animation
-  ; Solid_glow.animation ]
+  ; Solid_glow.animation
+  ; Solid_rainbow.animation ]
 
 let test_all () =
   off_animation :: List.concat_map (List.range 0 8) ~f:(fun controller_id ->
