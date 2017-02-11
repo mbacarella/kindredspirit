@@ -76,7 +76,7 @@ let bres3d ~start ~stop =
 	end;
 	if !deltaz >= 0 then begin
 	  z := !z + signz;
-	  deltaz := !deltaz + ay
+	  deltaz := !deltaz - ay
 	end;
 	y := !y + signy;
 	deltax := !deltax + ax;
@@ -97,7 +97,7 @@ let bres3d ~start ~stop =
 	end;
 	if !deltay >= 0 then begin
 	  y := !y + signy;
-	  deltay := !deltay + az
+	  deltay := !deltay - az
 	end;
 	z := !z + signz;
 	deltax := !deltax + ax;
