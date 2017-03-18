@@ -8,33 +8,33 @@ stripsattached=8
 swap=12345678
 
 strip1=ws2801
-start1=ffffff
+start1=00ff00
 order1=brg
 
 strip2=ws2801
-start2=ffffff
+start2=00ff00
 order2=brg
 
 strip3=ws2801
-start3=ffffff
+start3=00ff00
 order3=brg
 
 strip4=ws2801
-start4=ffffff
+start4=00ff00
 order4=brg
 
 strip5=ws2801
-start5=ffffff
+start5=00ff00
 order5=brg
 
 strip6=ws2801
-start6=ffffff
+start6=00ff00
 order6=brg
 
 strip7=ws2801
-start7=ffffff
+start7=00ff00
 order7=brg
 
 strip8=ws2801
-start8=ffffff
+start8=00ff00
 order8=brg
