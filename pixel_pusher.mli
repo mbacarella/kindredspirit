@@ -19,7 +19,15 @@
 
 open Core.Std
 open Async.Std
-  
+
+module Controller_report : sig
+  type t =
+      { controller_id : int
+      ; group_id : int
+      ; update_period : Time.Span.t
+      ; last_beacon : Time.t }
+end
+
 module Strip : sig
   type t =
       { strip_number: int
@@ -30,17 +38,20 @@ module Strip : sig
   val set_pixel : t -> color:Color.t -> index:int -> unit
 end
 
+type send_updates_t
+
+(* Begins watching for Pixel Pusher presence UDP broadcasts.  *)
+val start : unit -> send_updates_t Deferred.t
+
+(* List of all seen controllers. *)
+val get_controllers : unit -> Controller_report.t list
+
 (* Returns all strips seen by the subsystem. *)
 val get_strips : unit -> Strip.t list
 
 (* Like get_strips, but strips are indexed by (controller_id, strip_id) *)
 val get_strips_as_map : unit -> (int * int, Strip.t) Map.Poly.t
-
-type send_updates_t
   
-(* Begins watching for Pixel Pusher presence UDP broadcasts.  *)
-val start : unit -> send_updates_t Deferred.t
-
 (* Instructs subsystem to release any pending updates.
    Do this every time you've finished creating your "frame". 
    You can only call this from async. *) 

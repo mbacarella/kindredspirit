@@ -117,6 +117,14 @@ module Beacon = struct
 	; last_driven_ip; last_driven_port }
 end
 
+module Controller_report = struct
+  type t =
+      { controller_id : int
+      ; group_id : int
+      ; update_period : Time.Span.t
+      ; last_beacon : Time.t }
+end
+
 module Strip = struct
   type t =
       { strip_number: int
@@ -167,12 +175,14 @@ module Pusher_state = struct
       Hashtbl.fold known_pushers ~init:[] ~f:(fun ~key ~data acc ->
 	let timestamp = data.beacon_time in
 	if Time.Span.(>) (Time.diff now timestamp) threshold
-	then key :: acc
+	then (key, data.socket) :: acc
 	else acc)
     in
-    List.iter drop ~f:(fun key ->
+    List.iter drop ~f:(fun (key, socket) ->
       printf "*** Forgetting about Pixel Pusher %s, hasn't been seen in awhile (>%s)\n%!"
 	key (Time.Span.to_string threshold);
+      (* Wait 10s to close the socket, just in case we have packets queued *)
+      don't_wait_for (Clock.after (sec 10.) >>| fun () -> Core.Std.Unix.close socket);
       Hashtbl.remove known_pushers key);
     if List.length drop > 0 then
       update ()
@@ -270,7 +280,16 @@ let send_updates_from_non_async_thread fd =
   let buf = "r" in
   if Core.Std.Unix.write fd ~buf ~pos:0 ~len:1 <> 1 then
     failwithf "couldn't write one char to update fd" ()
-      
+
+let get_controllers () =
+  List.map (Hashtbl.data Pusher_state.known_pushers) ~f:(fun data ->
+    let beacon = data.Pusher_state.beacon in
+    { Controller_report.
+      controller_id = beacon.Beacon.controller_ordinal
+    ; group_id = beacon.Beacon.group_ordinal
+    ; update_period = beacon.Beacon.update_period
+    ; last_beacon = data.Pusher_state.beacon_time })
+    
 let get_strips () =
   !Pusher_state.strips
 

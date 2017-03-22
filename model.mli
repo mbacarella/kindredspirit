@@ -11,7 +11,8 @@ end
 
 type t =
     { virtual_strips : Virtual_strip.t list
-    ; virtual_pixels : Virtual_pixel.t list }
+    ; virtual_pixels : Virtual_pixel.t list
+    ; controller_ids : Int.Set.t }
 with sexp
     
 val load : string -> t Deferred.t

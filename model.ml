@@ -11,7 +11,8 @@ end
 
 type t =
   { virtual_strips : Virtual_strip.t list
-  ; virtual_pixels : Virtual_pixel.t list }
+  ; virtual_pixels : Virtual_pixel.t list
+  ; controller_ids : Int.Set.t }
 with sexp
 
 let signum f =
@@ -165,7 +166,11 @@ let load path =
 	    failwithf "line '%s' split on | into too many parts" line ())
   in
   let virtual_pixels = rasterize virtual_strips in
-  { virtual_strips; virtual_pixels }
+  let controller_ids =
+    List.fold_left virtual_strips ~init:Int.Set.empty ~f:(fun set strip ->
+      Set.add set strip.Virtual_strip.controller_id)
+  in
+  { virtual_strips; virtual_pixels; controller_ids }
 
 let dup t =
   { t with

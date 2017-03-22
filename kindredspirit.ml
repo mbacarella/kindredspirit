@@ -21,7 +21,7 @@ let reshape ~w ~h =
      even if the user resizes. *)
   GlDraw.viewport ~x:0 ~y:0 ~w ~h
 
-let text ?size ~x ~y s =
+let text ?(color=(1.0, 1.0, 1.0)) ?size ~x ~y s =
   let font =
     match size with
     | None | Some `sm -> Glut.BITMAP_HELVETICA_10
@@ -30,7 +30,7 @@ let text ?size ~x ~y s =
   in
   GlMat.push ();
   GlMat.load_identity ();
-  GlDraw.color (1.0, 1.0, 1.0);
+  GlDraw.color color;
   GlPix.raster_pos ~x ~y ();
   String.iter ~f:(fun c ->
     let c = Char.to_int c in
@@ -133,15 +133,42 @@ module Live_pane = struct
     display_animation ~x !loaded_animation "live" color_picker;
 end
 
+module Pixel_pusher_status = struct
+  let display model =
+    let module Controller_report = Pixel_pusher.Controller_report in
+    let expected_controllers = model.Model.controller_ids in    
+    let seen_controllers =
+      List.fold_left (Pixel_pusher.get_controllers ()) ~init:Int.Map.empty ~f:(fun map c ->
+        Map.add map ~key:c.Controller_report.controller_id ~data:c)
+    in
+    let box_width = 15. in
+    let box_height = 15. in
+    let now = Time.now () in
+    List.iteri (Set.to_list expected_controllers) ~f:(fun index controller_id ->
+      let x = display_width -. box_width in
+      let y = display_height -. (30. +. ((Float.of_int index) *. box_height)) in
+      let rect_color =
+        match Map.find seen_controllers controller_id with
+        | None -> (1.0, 0.0, 0.0)    
+        | Some c ->
+          let span = Time.diff now c.Controller_report.last_beacon in
+          if Time.Span.(<) span (sec 1.0) then (0.0, 1.0, 0.0)
+          else (0.0, 1.0, 0.0)
+      in
+      GlDraw.color rect_color;
+      GlDraw.rect (x, (y-.2.0)) (x +. 10., y +. 10.);
+      text ~color:(0.0, 0.0, 0.0) ~x ~y (sprintf " %d" controller_id))
+end
+  
 let send_frame_to_pixel_pushers a send_updates_t =
   match a.Animation.model with
     | None -> failwithf "animation %s is not initiatilized" a.Animation.name ()
     | Some model ->
       let strip_map = Pixel_pusher.get_strips_as_map () in
       List.iter model.Model.virtual_pixels ~f:(fun vp ->
-	let controller_id = vp.Virtual_pixel.controller_id in
-	let strip_id = vp.Virtual_pixel.strip_id in
-	let key = (controller_id, strip_id) in
+        let controller_id = vp.Virtual_pixel.controller_id in
+        let strip_id = vp.Virtual_pixel.strip_id in
+        let key = (controller_id, strip_id) in
 	match Map.find strip_map key with
 	  | None -> ()
 	  | Some strip ->
@@ -177,6 +204,7 @@ let display ~model ~send_updates_t () =
     List_pane.display ();
     Preview_pane.display ();
     Live_pane.display ();
+    Pixel_pusher_status.display model;
     let now = Time.now () in
     let fps = 1.0 /. Time.Span.to_sec (Time.diff now !last_display_time) in
     last_display_time := now;
