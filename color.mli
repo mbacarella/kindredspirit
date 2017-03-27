@@ -1,4 +1,6 @@
-type t = { r: int; g: int; b: int } with sexp
+open Core.Std
+  
+type t = { r: int; g: int; b: int } [@@deriving sexp, fields]
 val rand : unit -> t
 val black : t
 val white : t

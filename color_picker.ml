@@ -1,4 +1,4 @@
-open Core.Std
+open! Core.Std
 
 let gl_init () =
   GlArray.enable `color;

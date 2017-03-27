@@ -1,5 +1,5 @@
-open Core.Std
-open Async.Std
+open! Core.Std
+open! Async.Std
 
 let discovery_port = 7331
 let command_port = 9897
@@ -16,15 +16,15 @@ module Beacon = struct
 	; motion        : bool (* a motion controller *)
 	; notidempotent : bool (* a motion controller with side-effects *)
 	}
-    with sexp
+    [@@deriving sexp]
     let of_wire bs =
-      bitmatch bs with
-	| { rgbow : 1
-	  ; widepixels : 1
-	  ; logarithmic : 1
-	  ; motion : 1
-	  ; notidempotent : 1
-	  ; _unused : 3 } ->
+      match%bitstring bs with
+	| {| rgbow : 1
+	   ; widepixels : 1
+	   ; logarithmic : 1
+	   ; motion : 1
+	   ; notidempotent : 1
+	   ; _unused : 3 |} ->
 	  { rgbow; widepixels; logarithmic; motion; notidempotent }
   end
   type t =
@@ -53,11 +53,11 @@ module Beacon = struct
       ; last_driven_ip : string
       ; last_driven_port : int 
       }
-  with sexp
+  [@@deriving sexp]
 
   let of_wire s =
-    bitmatch Bitstring.bitstring_of_string s with
-      | { mac_address : 48 : bitstring
+    match%bitstring Bitstring.bitstring_of_string s with
+      | {| mac_address : 48 : bitstring
 	; ip_address  : 32
 	; device_type : 8
 	; protocol_version : 8
@@ -85,20 +85,20 @@ module Beacon = struct
 	; _segments : 32 : littleendian (* number of segments in each strip *)
 	; _power_domain : 32 : littleendian
 	; last_driven_ip : 32 : littleendian
-	; last_driven_port : 16 : littleendian } ->
+	; last_driven_port : 16 : littleendian |} ->
 
 	if device_type <> 2 then failwithf "Unsupported device type: %d" device_type ();
 	let mac_address =
-	  bitmatch mac_address with
-	    | { a : 8; b : 8; c : 8; d : 8; e : 8; f : 8 } ->
+	  match%bitstring mac_address with
+	    | {| a : 8; b : 8; c : 8; d : 8; e : 8; f : 8 |} ->
 	      sprintf "%02x:%02x:%02x:%02x:%02x:%02x" a b c d e f
 	in
 	let strip_info =
-	  bitmatch strip_info with
-	    | { a : 8 : bitstring; b : 8 : bitstring
+	  match%bitstring strip_info with
+	    | {| a : 8 : bitstring; b : 8 : bitstring
 	      ; c : 8 : bitstring; d : 8 : bitstring
 	      ; e : 8 : bitstring; f : 8 : bitstring
-	      ; g : 8 : bitstring; h : 8 : bitstring} ->
+	      ; g : 8 : bitstring; h : 8 : bitstring |} ->
 	      let z = Strip_info.of_wire in
 	      [| z a; z b; z c; z d; z e; z f; z g; z h |]
 	in
@@ -209,7 +209,7 @@ let send_now_or_soon pusher sendfun =
   end  
 
 let send_pixels_to_pushers () =
-  Hashtbl.iter Pusher_state.known_pushers ~f:(fun ~key:ip ~data:pusher ->
+  Hashtbl.iteri Pusher_state.known_pushers ~f:(fun ~key:ip ~data:pusher ->
     let beacon = pusher.Pusher_state.beacon in
     let socket = pusher.Pusher_state.socket in
     let addr = Unix.ADDR_INET (Unix.Inet_addr.of_string ip, command_port) in
@@ -243,9 +243,9 @@ let send_pixels_to_pushers () =
 	let pixels_base = strip_base+1 in
 	for pixel_num=0 to pixels_per_strip-1; do
 	  let pixel = matrix.(strip_num*pixels_per_strip + pixel_num) in
-	  buf.[pixels_base + pixel_num*3    ] <- char pixel.r;
-	  buf.[pixels_base + pixel_num*3 + 1] <- char pixel.g;
-	  buf.[pixels_base + pixel_num*3 + 2] <- char pixel.b
+	  buf.[pixels_base + pixel_num*3    ] <- char (Color.r pixel);
+	  buf.[pixels_base + pixel_num*3 + 1] <- char (Color.g pixel);
+	  buf.[pixels_base + pixel_num*3 + 2] <- char (Color.b pixel)
 	done);
       send_now_or_soon pusher (fun () ->
 	let bytes_sent = Core.Std.Unix.sendto socket ~buf ~pos:0 ~len:packet_size ~mode:[] ~addr in
@@ -317,7 +317,7 @@ let start_discovery_listener () =
 	  if mlen <> num_pixels then
 	    failwithf "*** PP %s's dimensions changed from %d to %d pixels" key mlen num_pixels ();
 	  let data = { state with Pusher_state.beacon_time = Time.now (); beacon } in
-	  Hashtbl.replace Pusher_state.known_pushers ~key ~data
+	  Hashtbl.set Pusher_state.known_pushers ~key ~data
 	| None ->
 	  printf "*** Discovered new Pixel Pusher: %s\n" addr_s;
 	  printf "%s\n" (Beacon.sexp_of_t beacon |> Sexp.to_string_hum ~indent:2);
@@ -328,7 +328,7 @@ let start_discovery_listener () =
 		  ; seq = 0
 		  ; matrix = matrix
 		  ; last_command = Time.epoch
-		  ; socket = Core.Std.Unix.(socket ~domain:PF_INET ~kind:SOCK_DGRAM ~protocol:0) };
+		  ; socket = Core.Std.Unix.socket ~domain:Core.Std.Unix.PF_INET ~kind:Core.Std.Unix.SOCK_DGRAM ~protocol:0 };
 	  Pusher_state.update ())
 
 let start () =

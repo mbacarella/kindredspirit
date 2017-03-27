@@ -1,19 +1,19 @@
-open Core.Std
-open Async.Std
+open! Core.Std
+open! Async.Std
 
 module Virtual_strip = struct
   type t =
     { controller_id : int
     ; strip_id : int
     ; way_points : Coordinate.t list }
-  with sexp
+  [@@deriving sexp, fields]
 end
 
 type t =
   { virtual_strips : Virtual_strip.t list
   ; virtual_pixels : Virtual_pixel.t list
   ; controller_ids : Int.Set.t }
-with sexp
+[@@deriving sexp, fields]
 
 let signum f =
   if f > 0 then 1

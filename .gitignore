@@ -1,2 +1,7 @@
 _build
 *.native
+*.o
+*.cmx
+*.cmi
+*.cmt
+*.cmti

@@ -1,4 +1,4 @@
-open Core.Std
+open! Core.Std
   
 type t =
   { controller_id : int
@@ -6,5 +6,4 @@ type t =
   ; pixel_id : int
   ; coord : Coordinate.t
   ; mutable color : Color.t }
-with sexp
-
+[@@deriving sexp, fields]

@@ -1,3 +1,2 @@
 B _build
-PKG core core_extended async bitstring sexplib lablgl lablgl.glut fftw3
-EXT bitstring sexplib
+PKG core core_extended async ppx_bitstring sexplib fieldslib lablgl lablgl.glut fftw3

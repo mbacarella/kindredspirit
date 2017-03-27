@@ -1,5 +1,5 @@
-open Core.Std
-open Async.Std
+open! Core.Std
+open! Async.Std
 
 let title = "Kindred Spirit Lighting Console"
   
@@ -228,7 +228,7 @@ let tick () =
      side-effect of surrendering time to the Async thread. 
      It also saves us from burning 100% CPU (if we don't have to). *)
   let span = Time.diff !next_display_time (Time.now ()) in
-  if Time.Span.( span > Time.Span.zero ) then
+  if Time.Span.(>) span Time.Span.zero then
     Time.pause span;
   Glut.postRedisplay ()
 
@@ -297,7 +297,7 @@ let main () =
 
 let () =
   let cmd =
-    Command.async_basic ~summary:title
+    Command.async ~summary:title
       Command.Spec.(empty +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power")
       (fun test_animations () ->
 	if test_animations then
