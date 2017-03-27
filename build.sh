@@ -1,8 +1,17 @@
 #!/bin/bash
 
-#          -w A-4-33-40-41-42-43-34-4 \
+WARN_ARGS="-w A-4-32-33-34-41-42-43"
+SRCS="color.mli color.ml \
+          pixel_pusher.mli pixel_pusher.ml \
+          color_picker.mli color_picker.ml \
+          coordinate.mli coordinate.ml \
+          virtual_pixel.mli virtual_pixel.ml \
+          model.mli model.ml \
+          animation.mli animation.ml \
+          kindredspirit.ml"
 
 ocamlfind opt \
+          $WARN_ARGS \
           -thread \
           -short-paths \
           -strict-sequence \
@@ -17,11 +26,4 @@ ocamlfind opt \
           -package ppx_bitstring \
           -linkpkg \
           -o kindredspirit.native \
-          color.mli color.ml \
-          pixel_pusher.mli pixel_pusher.ml \
-          color_picker.mli color_picker.ml \
-          coordinate.mli coordinate.ml \
-          virtual_pixel.mli virtual_pixel.ml \
-          model.mli model.ml \
-          animation.mli animation.ml \
-          kindredspirit.ml
+          $SRCS
