@@ -172,8 +172,8 @@ let send_frame_to_pixel_pushers a send_updates_t =
 	match Map.find strip_map key with
 	  | None -> ()
 	  | Some strip ->
-	    let index = vp.Virtual_pixel.pixel_id in
-	    let color = vp.Virtual_pixel.color in
+	    let index = Virtual_pixel.pixel_id vp in
+	    let color = Virtual_pixel.color vp in
 	    Pixel_pusher.Strip.set_pixel strip ~color ~index);
       Pixel_pusher.send_updates_from_non_async_thread send_updates_t
 
