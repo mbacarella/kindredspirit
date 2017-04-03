@@ -7,6 +7,8 @@ type t =
     ; mutable primary_color : Color.t option
     ; mutable secondary_color : Color.t option }
 
+let dj = { Coordinate.x=0.; y=100.; z=3. }
+          
 let init t model =
   { t with model = Some (Model.dup model) }
 
@@ -96,7 +98,8 @@ let rainbow_colors =
           if i >= 512 then 767-i
           else if i >= 256 then i-256
           else 0 }))
-module Solid_rainbow = struct
+
+module Rainbow_solid = struct
   let i = ref 0
   let update t =
     let cols = rainbow_colors () in
@@ -106,12 +109,27 @@ module Solid_rainbow = struct
     i := (succ !i) mod (Array.length cols)
 
   let animation =
-    { empty with name = "solidrainbow"; update }
+    { empty with name = "rainbow-solid"; update }
+end
+
+module Rainbow_dj = struct
+  let i = ref 0
+  let update t =
+    let cols = rainbow_colors () in
+    let colsl = Array.length cols in
+    iter_pixels t ~f:(fun _ vp ->
+      let d = Coordinate.dist dj (Virtual_pixel.coord vp) |> Float.to_int in
+      let index = (!i + d*3) mod colsl in 
+      vp.Virtual_pixel.color <- cols.(index)
+    );
+    incr i
+      
+  let animation =
+    { empty with name = "rainbow-dj"; update }
 end
 
 module Radiate_dj = struct
   let ticks = ref 0
-  let dj = { Coordinate.x=0.; y=100.; z=3. }
   let update t =
     let i = Float.of_int !ticks in
     iter_pixels t ~f:(fun _ vp ->
@@ -135,7 +153,8 @@ let live_all =
   ; noise_animation
   ; Rain.animation
   ; Solid_glow.animation
-  ; Solid_rainbow.animation
+  ; Rainbow_solid.animation
+  ; Rainbow_dj.animation
   ; Radiate_dj.animation ]
 
 let test_all () =
