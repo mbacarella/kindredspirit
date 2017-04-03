@@ -29,7 +29,7 @@ module Set = struct
       pp_basic (fun () -> iter_pixels_set_color (fun () -> Color.of_string color))
 
     let cmd =
-      Command.async_basic ~summary:"set all LEDs on all strips"
+      Command.async ~summary:"set all LEDs on all strips"
 	Command.Spec.(empty +> anon ("color" %: string))
 	(fun color () -> set_all ~color)
   end
