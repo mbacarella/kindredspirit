@@ -81,7 +81,7 @@ let display_model =
     List.iter model.Model.virtual_pixels ~f:(fun vp ->
       GlDraw.color (Color.to_gl vp.Virtual_pixel.color);
       let coord = vp.Virtual_pixel.coord in
-      GlDraw.vertex ~x:coord.Coordinate.x ~y:coord.Coordinate.y
+      GlDraw.vertex ~x:coord.Coordinate.x ~y:(130. -. coord.Coordinate.y)
 	~z:coord.Coordinate.z ());
     GlDraw.ends ();
     GlMat.pop ())

@@ -12,7 +12,10 @@ end
 type t =
   { virtual_strips : Virtual_strip.t list
   ; virtual_pixels : Virtual_pixel.t list
-  ; controller_ids : Int.Set.t }
+  ; controller_ids : Int.Set.t
+  ; x_limits : float * float
+  ; y_limits : float * float
+  ; z_limits : float * float }
 [@@deriving sexp, fields]
 
 let signum f =
@@ -148,10 +151,11 @@ let load path =
 		  List.map points ~f:(fun point ->
 		    match String.split ~on:',' (String.strip point) with
 		      | x :: y :: z :: [] ->
-			{ Coordinate.
-			  x = Float.of_string x -. 140. (* hax *)
-			; y = Float.of_string y
-			; z = Float.of_string z }
+                        (* haxes *)
+                        let x = Float.of_string x -. 140. in
+                        let y = Float.of_string y in
+                        let z = -. (Float.of_string z) in
+			{ Coordinate.x; y; z }
 		      | _lst ->
 			failwithf "way-point '%s' not of the form 'x,y,z'" point ())
 		in
@@ -170,7 +174,17 @@ let load path =
     List.fold_left virtual_strips ~init:Int.Set.empty ~f:(fun set strip ->
       Set.add set strip.Virtual_strip.controller_id)
   in
-  { virtual_strips; virtual_pixels; controller_ids }
+  let limits f =
+    let first = List.hd_exn virtual_pixels in
+    List.fold_left virtual_pixels ~init:(f first, f first) ~f:(fun (min, max) vp ->
+      if f vp < min then (f vp, max)
+      else if f vp > max then (min, f vp)
+      else (min, max))
+  in
+  let x_limits = limits (Fn.compose Coordinate.x Virtual_pixel.coord) in
+  let y_limits = limits (Fn.compose Coordinate.y Virtual_pixel.coord) in
+  let z_limits = limits (Fn.compose Coordinate.z Virtual_pixel.coord) in
+  { virtual_strips; virtual_pixels; controller_ids; x_limits; y_limits; z_limits }
 
 let dup t =
   { t with

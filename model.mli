@@ -12,7 +12,10 @@ end
 type t =
     { virtual_strips : Virtual_strip.t list
     ; virtual_pixels : Virtual_pixel.t list
-    ; controller_ids : Int.Set.t }
+    ; controller_ids : Int.Set.t
+    ; x_limits : float * float
+    ; y_limits : float * float
+    ; z_limits : float * float }
 [@@deriving sexp, fields]
     
 val load : string -> t Deferred.t

@@ -40,8 +40,7 @@ module Rain = struct
   let ticks = ref 0
   let height = 140.
   let update t =
-    let pos = height -. (Float.of_int (!ticks mod (Float.to_int height))) in
-    assert (pos > 0.);
+    let pos = Float.of_int (!ticks mod (Float.to_int height)) in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
 	(let coord = vp.Virtual_pixel.coord in
@@ -51,9 +50,34 @@ module Rain = struct
 	 else
 	   Option.map t.primary_color ~f:(Color.shade ~factor:((dist /. height) *. 10.))));
     incr ticks
+      
   let animation =
     { empty with
       name = "rain"
+    ; update
+    ; primary_color = Some (Color.of_hex_int 0x660E6F)
+    ; secondary_color = Some Color.black }
+end
+
+module Rain_rnd = struct
+  let ticks = ref 0
+  let height = 140.
+  let color = ref (Color.rand ())
+  let update t =
+    let pos = Float.of_int (!ticks mod (Float.to_int height)) in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <-
+	(let coord = vp.Virtual_pixel.coord in
+	 let dist = coord.Coordinate.y -. pos in
+	 if dist < 0. then Color.black
+         else if dist < 1. then !color
+	 else Color.shade ~factor:((dist /. height) *. 10.) !color));
+    ticks := (succ !ticks) mod (Float.to_int height);
+    if !ticks = 0 then color := Color.rand ()
+    
+  let animation =
+    { empty with
+      name = "rain-rnd"
     ; update
     ; primary_color = Some (Color.of_hex_int 0x660E6F)
     ; secondary_color = Some Color.black }
@@ -119,7 +143,7 @@ module Rainbow_dj = struct
     let colsl = Array.length cols in
     iter_pixels t ~f:(fun _ vp ->
       let d = Coordinate.dist dj (Virtual_pixel.coord vp) |> Float.to_int in
-      let index = (!i + d*3) mod colsl in 
+      let index = (!i*2 + d*3) mod colsl in 
       vp.Virtual_pixel.color <- cols.(index)
     );
     incr i
@@ -130,6 +154,7 @@ end
 
 module Radiate_dj = struct
   let ticks = ref 0
+    
   let update t =
     let i = Float.of_int !ticks in
     iter_pixels t ~f:(fun _ vp ->
@@ -139,6 +164,7 @@ module Radiate_dj = struct
 	else if d >= (i +. 40.) && d < (i +. 80.) then Option.value_exn t.secondary_color
 	else Color.black);
     ticks := (succ !ticks) mod 200
+      
   let animation =
     { empty with name="radiate-dj"
     ; update
@@ -146,16 +172,129 @@ module Radiate_dj = struct
     ; secondary_color = Some Color.black
     }
 end
+
+module Scan_dj = struct
+  let ticks = ref 0
+
+  let update t =
+    let pos = Float.of_int (!ticks mod 190) in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <- Option.value_exn
+        (let x = Virtual_pixel.coord vp |> Coordinate.x in
+         let dist = Float.abs (x -. (Coordinate.x dj)) in
+         if dist >= pos -. 10. && dist < pos +. 10.
+         then t.primary_color
+         else Some Color.black));
+    incr ticks
+
+  let animation =
+    { empty with name="scan-dj"
+    ; update
+    ; primary_color = Some Color.{r=0x99; g=0; b=0 } }
+end
+
+module Scan_dj_rnd = struct
+  let ticks = ref 0
+  let color = ref (Color.rand ())
+  let update t =
+    let pos = Float.of_int (!ticks mod 190) in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <-
+        (let x = Virtual_pixel.coord vp |> Coordinate.x in
+         let dist = Float.abs (x -. (Coordinate.x dj)) in
+         if dist >= pos-. 10. && dist < pos+. 10.
+         then !color
+         else Color.black));
+    ticks := (succ !ticks) mod 190;
+    if !ticks = 0 then color := Color.rand ()
+
+  let animation =
+    { empty with name="scan-dj-rand"
+    ; update }
+end
+  
+(* let y_buckets = *)
+(*   (\* Bucket pixels along y axis *\) *)
+(*   Memo.general (fun t -> *)
+(*     let map = *)
+(*       with_model t ~f:(fun _t model -> *)
+(*         List.fold_left (Model.virtual_pixels model) ~init:Map.Poly.empty ~f:(fun map vp -> *)
+(*           let key = Virtual_pixel.coord vp |> Coordinate.y |> Float.to_int in *)
+(*           Map.add_multi map ~key ~data:vp)) *)
+(*     in *)
+(*     Map.to_alist map |> List.fold_left ~init:Map.Poly.empty ~f:(fun map (key, vps) -> *)
+(*       let data = *)
+(*         Array.of_list (List.sort vps ~cmp:(fun a b -> *)
+(*           Float.compare *)
+(*             (Virtual_pixel.coord a |> Coordinate.x) *)
+(*             (Virtual_pixel.coord b |> Coordinate.x))) *)
+(*       in *)
+(*       Map.add map ~key ~data)) *)
+
+module Flame = struct
+  let ticks = ref 0
+    
+  let update t =
+    (* memo some of this *)
+    let map =
+      let map =
+        with_model t ~f:(fun _t model ->
+          List.fold_left (Model.virtual_pixels model) ~init:Map.Poly.empty ~f:(fun map vp ->
+            let key = Virtual_pixel.coord vp |> Coordinate.y |> Float.to_int in
+            Map.add_multi map ~key ~data:vp))
+      in
+      Map.to_alist map |> List.fold_left ~init:Map.Poly.empty ~f:(fun map (key, vps) ->
+        let data =
+          Array.of_list (List.sort vps ~cmp:(fun a b ->
+            Float.compare
+              (Virtual_pixel.coord a |> Coordinate.x)
+              (Virtual_pixel.coord b |> Coordinate.x)))
+        in
+        Map.add map ~key ~data)
+    in
+    let y_range = Map.keys map |> List.sort ~cmp:Int.compare |> Array.of_list in
+    let min_y, max_y = y_range.(0), y_range.(Array.length y_range-1) in
+    assert (min_y < (max_y+1));
+    let row y = Map.find_exn map y in
+    Array.iter (row max_y) ~f:(fun vp ->
+      vp.Virtual_pixel.color <- Option.value_exn t.primary_color);
+    List.iter (List.range 0 (Array.length y_range-1)) ~f:(fun i ->
+      let y = y_range.(i) in
+      let lower_y = y_range.(succ i) in
+      let cur_row = row y in
+      let prev_row = row lower_y in
+      Array.iteri cur_row ~f:(fun j vp ->
+        let pct = (Float.of_int j) /. Float.of_int (Array.length cur_row) in
+        let prev_index =
+          let index = (Float.of_int (Array.length prev_row)) *. pct |> Float.to_int in
+          min (pred (Array.length prev_row)) index
+        in
+        let prev_color = Virtual_pixel.color (prev_row.(prev_index)) in
+        let color =
+          Color.shade ~factor:(Random.float 0.05) prev_color
+        in
+        vp.Virtual_pixel.color <- color));
+    incr ticks
+
+  let animation =
+    { empty with name="flame"
+    ; primary_color = Some (Color.rand ())
+    ; update } 
+end
   
 let live_all =
   [ off_animation
   ; solid_animation
   ; noise_animation
   ; Rain.animation
+  ; Rain_rnd.animation
+  ; Scan_dj.animation
+  ; Scan_dj_rnd.animation
   ; Solid_glow.animation
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
-  ; Radiate_dj.animation ]
+  ; Radiate_dj.animation
+  ; Flame.animation ]
 
 let test_all () =
   off_animation :: List.concat_map (List.range 0 8) ~f:(fun controller_id ->
