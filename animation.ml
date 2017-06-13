@@ -193,6 +193,23 @@ module Scan_dj = struct
     ; primary_color = Some Color.{r=0x99; g=0; b=0 } }
 end
 
+module Strip_walk = struct
+  let ticks = ref 0
+  let update t =
+    let id = !ticks / 10 in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <-
+        if vp.Virtual_pixel.pixel_id = id then Option.value_exn t.primary_color
+        else Option.value_exn t.secondary_color);
+    ticks := (succ !ticks) mod 1500
+  ;;
+  let animation =
+    { empty with name="stripwalk"
+    ; primary_color = Some Color.green
+    ; secondary_color = Some Color.{r=0x66; g=0x66; b=0x66 } 
+    ; update }
+end 
+
 module Scan_dj_rnd = struct
   let ticks = ref 0
   let color = ref (Color.rand ())
@@ -294,7 +311,8 @@ let live_all =
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
   ; Radiate_dj.animation
-  ; Flame.animation ]
+  ; Flame.animation
+  ; Strip_walk.animation ]
 
 let test_all () =
   off_animation :: List.concat_map (List.range 0 8) ~f:(fun controller_id ->

@@ -232,12 +232,13 @@ let tick () =
     Time.pause span;
   Glut.postRedisplay ()
 
-let key_input ~key ~x:_ ~y:_ =
+let key_input model ~key ~x:_ ~y:_ =
   match Char.of_int key with
     | None -> printf "wat (key code: %d)\n" key
     | Some '\r' -> Live_pane.load_animation_from_preview ()
     | Some '\n' -> printf "received line feed?!\n"
     | Some ' ' -> rotating := not !rotating
+    | Some 'D' -> Model.print model
     | Some 'Q' ->
       printf "*** Shutting down on 'Q' command\n";
       Shutdown.shutdown 0
@@ -280,7 +281,7 @@ let gl_main model send_updates_t =
   Glut.reshapeFunc ~cb:reshape;
   Glut.displayFunc ~cb:(display ~model ~send_updates_t);
   Glut.idleFunc ~cb:(Some tick);
-  Glut.keyboardFunc ~cb:key_input;
+  Glut.keyboardFunc ~cb:(key_input model);
   Glut.mouseFunc ~cb:mouse_click_event;
   Glut.motionFunc ~cb:mouse_motion;
   Glut.passiveMotionFunc ~cb:mouse_motion;

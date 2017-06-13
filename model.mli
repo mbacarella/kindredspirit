@@ -20,3 +20,4 @@ type t =
     
 val load : string -> t Deferred.t
 val dup : t -> t
+val print : t -> unit

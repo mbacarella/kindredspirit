@@ -133,7 +133,12 @@ module Strip = struct
       ; group_id : int
       ; matrix : Color.t Array.t }
   let set_pixel t ~color ~index =
-   t.matrix.(t.strip_number * t.strip_length + index) <- color
+    (* TODO: fix me *)
+    if index > t.strip_length then ()
+    else
+     (* failwithf "Strip.set_pixel: exceded strip length for %d|%d: %d > %d"
+       t.controller_id t.strip_number index t.strip_length (); *)
+      t.matrix.(t.strip_number * t.strip_length + index) <- color
 end
 
 module Pusher_state = struct

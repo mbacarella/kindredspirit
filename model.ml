@@ -45,7 +45,7 @@ let bres3d ~start ~stop =
   let x = ref startx in
   let y = ref starty in
   let z = ref startz in
-  let save acc = { Coordinate.x=f !x; y=f !y; z=f !z } :: acc in
+  let save acc = acc @ [{ Coordinate.x=f !x; y=f !y; z=f !z }] in
   if ax >= max ay az then (* x dominant *)
     let deltay = ref (ay - (ax lsr 1)) in
     let deltaz = ref (az - (ax lsr 1)) in
@@ -128,7 +128,7 @@ let rasterize strips =
 		; coord = coord
 		; color = Color.black })
 	    in
-	    cur, (coords @ acc)) |> snd)
+	    cur, (acc @ coords)) |> snd)
   in
   printf "*** Converted %d strips to %d pixels\n" (List.length strips) (List.length pixels);
   pixels
@@ -190,3 +190,7 @@ let dup t =
   { t with
     virtual_pixels = (* force a deep copy *)
       List.map t.virtual_pixels ~f:(fun vp -> { vp with Virtual_pixel.color = vp.Virtual_pixel.color }) }
+
+let print t =
+  print_endline (sexp_of_t t |> Sexp.to_string_hum)
+    
