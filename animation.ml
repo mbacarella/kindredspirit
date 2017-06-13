@@ -177,7 +177,7 @@ module Scan_dj = struct
   let ticks = ref 0
 
   let update t =
-    let pos = Float.of_int (!ticks mod 190) in
+    let pos = Float.of_int (!ticks mod 210) in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
         (let x = Virtual_pixel.coord vp |> Coordinate.x in
@@ -214,7 +214,7 @@ module Scan_dj_rnd = struct
   let ticks = ref 0
   let color = ref (Color.rand ())
   let update t =
-    let pos = Float.of_int (!ticks mod 190) in
+    let pos = Float.of_int (!ticks mod 210) in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <-
         (let x = Virtual_pixel.coord vp |> Coordinate.x in
