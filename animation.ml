@@ -45,7 +45,27 @@ let twinkle_animation =
         if Random.int 10 = 0 then Color.rand ()
         else Color.black
       end) }
-    
+
+module Sticks = struct
+  let ticks = ref 0
+  let update t =
+    let a, b =
+      if !ticks > 100 then t.primary_color, t.secondary_color
+      else t.secondary_color, t.primary_color
+    in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <-
+        Option.value_exn (if vp.Virtual_pixel.strip_id mod 2 = 0 then a else b));
+    ticks := (succ !ticks) mod 200
+ 
+  let animation =
+    { empty with
+      name = "sticks"
+    ; update
+    ; primary_color = Some Color.green
+    ; secondary_color = Some Color.purple }
+end
+  
 module Rain = struct
   let ticks = ref 0
   let height = 140.
@@ -314,6 +334,7 @@ let live_all =
   ; solid_animation
   ; twinkle_animation
   ; noise_animation
+  ; Sticks.animation
   ; Strip_walk.animation 
   ; Rain.animation
   ; Rain_rnd.animation

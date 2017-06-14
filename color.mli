@@ -7,6 +7,7 @@ val white : t
 val green : t
 val red : t
 val blue : t
+val purple : t
 val of_hex_int : int -> t
 val to_gl : t -> (float * float * float)
 val of_gl : (float * float * float) -> t
