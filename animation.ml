@@ -36,6 +36,16 @@ let noise_animation =
     name = "noise"
   ; update = iter_pixels ~f:(fun _t vp -> vp.Virtual_pixel.color <- Color.rand ()) }
 
+let twinkle_animation =
+  { empty with
+    name = "twinkle"
+  ; update = iter_pixels ~f:(fun _t vp ->
+    vp.Virtual_pixel.color <-
+      begin
+        if Random.int 10 = 0 then Color.rand ()
+        else Color.black
+      end) }
+    
 module Rain = struct
   let ticks = ref 0
   let height = 140.
@@ -202,9 +212,9 @@ module Strip_walk = struct
         if vp.Virtual_pixel.pixel_id = id then Option.value_exn t.primary_color
         else Option.value_exn t.secondary_color);
     ticks := (succ !ticks) mod 1500
-  ;;
+      
   let animation =
-    { empty with name="stripwalk"
+    { empty with name="strip-walk"
     ; primary_color = Some Color.green
     ; secondary_color = Some Color.{r=0x66; g=0x66; b=0x66 } 
     ; update }
@@ -302,7 +312,9 @@ end
 let live_all =
   [ off_animation
   ; solid_animation
+  ; twinkle_animation
   ; noise_animation
+  ; Strip_walk.animation 
   ; Rain.animation
   ; Rain_rnd.animation
   ; Scan_dj.animation
@@ -311,8 +323,7 @@ let live_all =
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
   ; Radiate_dj.animation
-  ; Flame.animation
-  ; Strip_walk.animation ]
+  ; Flame.animation ]
 
 let test_all () =
   off_animation :: List.concat_map (List.range 0 8) ~f:(fun controller_id ->
