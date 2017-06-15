@@ -40,7 +40,7 @@ let text ?(color=(1.0, 1.0, 1.0)) ?size ~x ~y s =
  
 module List_pane = struct
   let height = 10.
-  let width = 160.
+  let width = 150.
   let mouse_over_animation () =
     let x = 0. in
     List.findi (Animation.all ()) ~f:(fun i _a ->
