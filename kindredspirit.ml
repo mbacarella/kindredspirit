@@ -269,6 +269,8 @@ let gl_main model send_updates_t =
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
   let _ = Glut.createWindow ~title in
 
+  Glut.setCursor Glut.CURSOR_LEFT_ARROW;
+  
   Glut.positionWindow ~x:0 ~y:0;
   GlMat.mode `projection;
   GlMat.load_identity ();
