@@ -2,9 +2,9 @@ open! Core.Std
 open! Async.Std
 
 let title = "Kindred Spirit Lighting Console"
-  
-let display_width = 1600.0
-let display_height = 880.0
+
+let display_width = 1366.0
+let display_height = 758.0
 
 let target_fps = 50.
 let display_interval = sec (1. /. target_fps)
@@ -274,7 +274,7 @@ let gl_main model send_updates_t =
   Glut.positionWindow ~x:0 ~y:0;
   GlMat.mode `projection;
   GlMat.load_identity ();
-  GlMat.ortho ~x:(0.0, display_width) ~y:(0.0, display_height) ~z:(-300.0, 300.0);
+  GlMat.ortho ~x:(0.0, display_width) ~y:(0.0, display_height) ~z:(-360.0, 360.0);
   GlMat.mode `modelview;
   GlMat.load_identity ();
 

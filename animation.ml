@@ -46,24 +46,20 @@ let twinkle_animation =
         else Color.black
       end) }
 
-module Sticks = struct
+module Sticks_rnd = struct
   let ticks = ref 0
+  let gen () = Array.init 100 ~f:(fun _ -> Color.rand ())
+  let colors = ref (gen ())
   let update t =
-    let a, b =
-      if !ticks > 100 then t.primary_color, t.secondary_color
-      else t.secondary_color, t.primary_color
-    in
+    if !ticks = 0 then colors := gen ();
     iter_pixels t ~f:(fun _ vp ->
-      vp.Virtual_pixel.color <-
-        Option.value_exn (if vp.Virtual_pixel.strip_id mod 2 = 0 then a else b));
-    ticks := (succ !ticks) mod 200
+	vp.Virtual_pixel.color <- (!colors).(vp.Virtual_pixel.strip_id));
+    ticks := (succ !ticks) mod 100
  
   let animation =
     { empty with
-      name = "sticks"
-    ; update
-    ; primary_color = Some Color.green
-    ; secondary_color = Some Color.purple }
+      name = "sticks-rnd"
+    ; update }
 end
   
 module Rain = struct
@@ -318,7 +314,7 @@ module Flame = struct
         in
         let prev_color = Virtual_pixel.color (prev_row.(prev_index)) in
         let color =
-          Color.shade ~factor:(Random.float 0.05) prev_color
+          Color.shade ~factor:(Random.float 0.025) prev_color
         in
         vp.Virtual_pixel.color <- color));
     incr ticks
@@ -334,7 +330,7 @@ let live_all =
   ; solid_animation
   ; twinkle_animation
   ; noise_animation
-  ; Sticks.animation
+  ; Sticks_rnd.animation
   ; Strip_walk.animation 
   ; Rain.animation
   ; Rain_rnd.animation
