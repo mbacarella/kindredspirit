@@ -53,7 +53,7 @@ module Sticks_rnd = struct
   let update t =
     if !ticks = 0 then colors := gen ();
     iter_pixels t ~f:(fun _ vp ->
-	vp.Virtual_pixel.color <- (!colors).(vp.Virtual_pixel.strip_id));
+	vp.Virtual_pixel.color <- (!colors).(vp.Virtual_pixel.controller_id * 8 + vp.Virtual_pixel.strip_id));
     ticks := (succ !ticks) mod 100
  
   let animation =
