@@ -115,12 +115,14 @@ let bres3d ~start ~stop =
 let rasterize strips =
   let pixels =
     List.concat_map strips ~f:(fun strip ->
+      let pixel_base = ref 0 in
       match strip.Virtual_strip.way_points with
 	| _ :: [] | [] -> assert false
 	| hd :: tl ->
 	  List.fold_left tl ~init:(hd, []) ~f:(fun (prev, acc) cur ->
 	    let coords =
 	      List.mapi (bres3d ~start:prev ~stop:cur) ~f:(fun pixel_id coord ->
+		let pixel_id = !pixel_base + pixel_id in
 		{ Virtual_pixel.
 		  strip_id = strip.Virtual_strip.strip_id
 		; controller_id = strip.Virtual_strip.controller_id
@@ -128,6 +130,7 @@ let rasterize strips =
 		; coord = coord
 		; color = Color.black })
 	    in
+	    pixel_base := Virtual_pixel.pixel_id (List.rev coords |> List.hd_exn);
 	    cur, (acc @ coords)) |> snd)
   in
   printf "*** Converted %d strips to %d pixels\n" (List.length strips) (List.length pixels);
