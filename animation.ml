@@ -201,44 +201,31 @@ end
 
 module Scan_dj = struct
   let ticks = ref 0
+  let color = ref (Color.rand ())
 
-  let update t =
-    let pos = Float.of_int (!ticks mod 210) in
+  let update ~rnd t =
+    let pos = Float.of_int (!ticks mod 200) in
+    let c = if rnd then Some !color else t.primary_color in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
-        (let x = Virtual_pixel.coord vp |> Coordinate.x in
-         let dist = Float.abs (x -. (Coordinate.x dj)) in
-         if dist >= pos -. 10. && dist < pos +. 10.
-         then t.primary_color
+        (let dist = Coordinate.dist vp.Virtual_pixel.coord dj in
+         if dist >= pos && dist < pos +. 40. then c
          else Some Color.black));
-    incr ticks
+    ticks := (succ !ticks) mod 190;
+    if rnd && !ticks = 0 then color := Color.rand ()
 
-  let animation =
+  let reg_animation =
     { empty with name="scan-dj"
-    ; update
+    ; update = update ~rnd:false
     ; primary_color = Some Color.{r=0x99; g=0; b=0 } }
+
+  let rnd_animation =
+    { empty with name="scan-dj-rnd"
+    ; update = update ~rnd:true }
 end
-
-module Strip_walk = struct
-  let ticks = ref 0
-  let update t =
-    let id = !ticks / 10 in
-    iter_pixels t ~f:(fun _ vp ->
-      vp.Virtual_pixel.color <-
-        if vp.Virtual_pixel.pixel_id = id then Option.value_exn t.primary_color
-        else Option.value_exn t.secondary_color);
-    ticks := (succ !ticks) mod 1500
-      
-  let animation =
-    { empty with name="strip-walk"
-    ; primary_color = Some Color.green
-    ; secondary_color = Some Color.{r=0x66; g=0x66; b=0x66 } 
-    ; update }
-end 
-
+(*
 module Scan_dj_rnd = struct
   let ticks = ref 0
-  let color = ref (Color.rand ())
   let update t =
     let pos = Float.of_int (!ticks mod 210) in
     iter_pixels t ~f:(fun _ vp ->
@@ -255,6 +242,25 @@ module Scan_dj_rnd = struct
     { empty with name="scan-dj-rand"
     ; update }
 end
+*)
+  
+module Strip_walk = struct
+  let ticks = ref 0
+  let update t =
+    let id = !ticks / 10 in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <-
+        if vp.Virtual_pixel.pixel_id = id then Option.value_exn t.primary_color
+        else Option.value_exn t.secondary_color);
+    ticks := (succ !ticks) mod 1000
+      
+  let animation =
+    { empty with name="strip-walk"
+    ; primary_color = Some Color.green
+    ; secondary_color = Some Color.{r=0x66; g=0x66; b=0x66 } 
+    ; update }
+end 
+
   
 (* let y_buckets = *)
 (*   (\* Bucket pixels along y axis *\) *)
@@ -334,8 +340,8 @@ let live_all =
   ; Strip_walk.animation 
   ; Rain.animation
   ; Rain_rnd.animation
-  ; Scan_dj.animation
-  ; Scan_dj_rnd.animation
+  ; Scan_dj.reg_animation
+  ; Scan_dj.rnd_animation
   ; Solid_glow.animation
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
