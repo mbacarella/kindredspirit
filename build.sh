@@ -8,7 +8,7 @@ ocamlbuild \
     -pkg lablgl.glut \
     -pkg ppx_bitstring \
     -pkg bitstring \
-    -tag "ppx(~/.opam/4.04.0/lib/ppx_bitstring/ppx_bitstring.ext)" \
+    -tag "ppx(~/.opam/4.04.0/lib/ppx_bitstring/ppx)" \
     -tag "ppx(ppx-jane -as-ppx)" \
     -tag thread \
     -tag debug \
