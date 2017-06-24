@@ -7,7 +7,7 @@ type t =
     ; mutable primary_color : Color.t option
     ; mutable secondary_color : Color.t option }
 
-let dj = { Coordinate.x=0.; y=100.; z=3. }
+let dj = { Coordinate.x=90.; y=30.; z=30. }
           
 let init t model =
   { t with model = Some (Model.dup model) }
