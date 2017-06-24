@@ -3,9 +3,15 @@ open! Async.Std
 
 let title = "Kindred Spirit Lighting Console"
 
+(* Thinkpad T420 *)
+let display_width = 1600.0
+let display_height = 880.0
+  
+(* (* Thinkpad SL410 *)
 let display_width = 1366.0
 let display_height = 758.0
-
+*)
+  
 let target_fps = 50.
 let display_interval = sec (1. /. target_fps)
 let num_display_calls = ref 0
