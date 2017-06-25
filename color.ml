@@ -42,4 +42,5 @@ let of_string = function
   | "red" -> red
   | "blue" -> blue
   | "rand" -> rand ()
+  | "purple" -> purple
   | s -> failwithf "Color.of_string: unknown color: %s" s ()
