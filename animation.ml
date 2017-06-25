@@ -217,16 +217,16 @@ end
 module Scan_dj = struct
   let ticks = ref 0
   let color = ref (Color.rand ())
-
+  let size = 625
   let update ~rnd t =
-    let pos = Float.of_int (!ticks mod 450) in
+    let pos = Float.of_int ((!ticks/2) mod size) in
     let c = if rnd then Some !color else t.primary_color in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
         (let dist = Coordinate.dist vp.Virtual_pixel.coord dj in
          if dist >= pos && dist < pos +. 40. then c
-         else Some Color.black));
-    ticks := (succ !ticks) mod 190;
+         else Some (Color.shade ~factor:0.05 vp.Virtual_pixel.color)));
+    ticks := (succ !ticks) mod size;
     if rnd && !ticks = 0 then color := Color.rand ()
 
   let reg_animation =
@@ -361,7 +361,7 @@ module Pixelate = struct
     { empty with name="pixelate"
     ; update } 
 end
-  
+
 let live_all =
   [ off_animation
   ; solid_animation
