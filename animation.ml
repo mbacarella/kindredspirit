@@ -204,7 +204,7 @@ module Scan_dj = struct
   let color = ref (Color.rand ())
 
   let update ~rnd t =
-    let pos = Float.of_int (!ticks mod 200) in
+    let pos = Float.of_int (!ticks mod 300) in
     let c = if rnd then Some !color else t.primary_color in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
@@ -223,26 +223,6 @@ module Scan_dj = struct
     { empty with name="scan-dj-rnd"
     ; update = update ~rnd:true }
 end
-(*
-module Scan_dj_rnd = struct
-  let ticks = ref 0
-  let update t =
-    let pos = Float.of_int (!ticks mod 210) in
-    iter_pixels t ~f:(fun _ vp ->
-      vp.Virtual_pixel.color <-
-        (let x = Virtual_pixel.coord vp |> Coordinate.x in
-         let dist = Float.abs (x -. (Coordinate.x dj)) in
-         if dist >= pos-. 10. && dist < pos+. 10.
-         then !color
-         else Color.black));
-    ticks := (succ !ticks) mod 190;
-    if !ticks = 0 then color := Color.rand ()
-
-  let animation =
-    { empty with name="scan-dj-rand"
-    ; update }
-end
-*)
   
 module Strip_walk = struct
   let ticks = ref 0
