@@ -240,6 +240,22 @@ module Strip_walk = struct
     ; update }
 end 
 
+module Slugs = struct
+  let ticks = ref 0
+  let update t =
+    let id = !ticks / 10 in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <-
+        if vp.Virtual_pixel.pixel_id = id then Option.value_exn t.primary_color
+        else Color.shade ~factor:0.05 vp.Virtual_pixel.color);
+    ticks := (succ !ticks) mod 1000
+      
+  let animation =
+    { empty with name="slugs"
+    ; primary_color = Some Color.green 
+    ; update }
+end 
+
   
 (* let y_buckets = *)
 (*   (\* Bucket pixels along y axis *\) *)
@@ -336,7 +352,8 @@ let live_all =
   ; twinkle_animation
   ; noise_animation
   ; Sticks_rnd.animation
-  ; Strip_walk.animation 
+  ; Strip_walk.animation
+  ; Slugs.animation
   ; Rain.animation
   ; Rain_rnd.animation
   ; Scan_dj.reg_animation
