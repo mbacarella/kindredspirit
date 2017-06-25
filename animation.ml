@@ -48,7 +48,17 @@ let twinkle_animation =
 
 module Sticks_rnd = struct
   let ticks = ref 0
-  let gen () = Array.init 100 ~f:(fun _ -> Color.rand ())
+  let gen () =
+    (* TODO: too basic? : / *)
+    Array.init 100 ~f:(fun _ ->
+      match Random.int 6 with
+      | 0 -> Color.red
+      | 1 -> Color.green
+      | 2 -> Color.blue
+      | 3 -> Color.white
+      | 4 -> Color.purple
+      | 5 -> Color.black
+      | _ -> assert false)
   let colors = ref (gen ())
   let update t =
     if !ticks = 0 then colors := gen ();
@@ -265,13 +275,31 @@ module Slugs = struct
         if vp.Virtual_pixel.pixel_id = id then Option.value_exn t.primary_color
         else Color.shade ~factor:0.05 vp.Virtual_pixel.color);
     ticks := (succ !ticks) mod 1000
-      
+
   let animation =
     { empty with name="slugs"
     ; primary_color = Some Color.green 
     ; update }
 end 
 
+(*
+module Layers = struct
+  let ticks = ref 0
+  let colors = Array.init 5000 ~f:(fun i ->
+    match i mod 4 with
+      | 0 -> Color.red
+      | 1 -> Color.green
+      | 2 -> Color.blue
+      | 3 -> Color.purple
+      | _ -> assert false)
+  let update t =
+    iter_pixels t ~f:(fun _ vp ->
+      let index = vp.Virtual_pixel.coord.Coordinate.y |> Float.to_int in
+      vp.Virtual_pixel.color <- colors.((index + (!ticks/10)) mod Array.length colors));
+    incr ticks
+  let animation = { empty with name = "layers"; update }
+end
+*)
   
 (* let y_buckets = *)
 (*   (\* Bucket pixels along y axis *\) *)
@@ -370,6 +398,7 @@ let live_all =
   ; Sticks_rnd.animation
   ; Strip_walk.animation
   ; Slugs.animation
+  (* ; Layers.animation *)
   ; Strobe.reg
   ; Strobe.rnd
   ; Rain.animation
