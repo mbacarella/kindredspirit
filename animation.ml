@@ -105,8 +105,7 @@ module Rain_rnd = struct
     { empty with
       name = "rain-rnd"
     ; update
-    ; primary_color = Some (Color.of_hex_int 0x660E6F)
-    ; secondary_color = Some Color.black }
+    ; primary_color = Some (Color.of_hex_int 0x660E6F) }
 end
 
 module Solid_glow = struct
