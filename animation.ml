@@ -203,7 +203,7 @@ module Scan_dj = struct
   let color = ref (Color.rand ())
 
   let update ~rnd t =
-    let pos = Float.of_int (!ticks mod 300) in
+    let pos = Float.of_int (!ticks mod 450) in
     let c = if rnd then Some !color else t.primary_color in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
@@ -312,6 +312,23 @@ module Flame = struct
     ; primary_color = Some (Color.rand ())
     ; update } 
 end
+
+module Pixelate = struct
+  let ticks = ref 0
+  let colors = Array.init 100 ~f:(fun _ -> Color.rand ())
+  let cluster_size = ref 1
+  let update t =
+    iter_pixels t ~f:(fun _ vp ->
+      let index = vp.Virtual_pixel.controller_id * 800 + vp.Virtual_pixel.strip_id * 100 + vp.Virtual_pixel.pixel_id in
+      vp.Virtual_pixel.color <- colors.(((!ticks/10 + index/(!cluster_size))) mod (Array.length colors)));
+    incr ticks;
+    if !ticks mod 650 = 0 then incr cluster_size;
+    if !cluster_size > 10 then cluster_size := 1
+      
+  let animation =
+    { empty with name="pixelate"
+    ; update } 
+end
   
 let live_all =
   [ off_animation
@@ -328,7 +345,8 @@ let live_all =
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
   ; Radiate_dj.animation
-  ; Flame.animation ]
+  ; Flame.animation
+  ; Pixelate.animation ]
 
 let test_all () =
   off_animation :: List.concat_map (List.range 0 8) ~f:(fun controller_id ->
