@@ -95,6 +95,14 @@ module Rain = struct
     ; secondary_color = Some Color.black }
 end
 
+module Split = struct
+  let update t =
+    iter_pixels t ~f:(fun _ vp ->
+      let d = Float.abs vp.Virtual_pixel.coord.Coordinate.z in
+      let pcolor = Option.value_exn t.primary_color in
+      vp.Virtual_pixel.color <- Color.shade ~factor:(d /. 50.) pcolor)
+  let animation = { empty with name = "split"; update; primary_color = Some Color.green }
+end
 (* TODO: factor me *)
 module Rain_rnd = struct
   let ticks = ref 0
@@ -387,7 +395,7 @@ module Pixelate = struct
       
   let animation =
     { empty with name="pixelate"
-    ; update } 
+     ; update } 
 end
 
 let live_all =
@@ -399,6 +407,7 @@ let live_all =
   ; Strip_walk.animation
   ; Slugs.animation
   (* ; Layers.animation *)
+  ; Split.animation
   ; Strobe.reg
   ; Strobe.rnd
   ; Rain.animation
