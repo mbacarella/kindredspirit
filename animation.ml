@@ -261,6 +261,7 @@ end
 
 module Flame = struct
   let ticks = ref 0
+  let init_color = ref (Color.rand ())
     
   let update t =
     (* memo some of this *)
@@ -284,8 +285,10 @@ module Flame = struct
     let min_y, max_y = y_range.(0), y_range.(Array.length y_range-1) in
     assert (min_y < (max_y+1));
     let row y = Map.find_exn map y in
-    Array.iter (row max_y) ~f:(fun vp ->
-      vp.Virtual_pixel.color <- Option.value_exn t.primary_color);
+
+    if !ticks mod 10 = 0 then init_color := Color.rand ();
+    
+    Array.iter (row max_y) ~f:(fun vp -> vp.Virtual_pixel.color <- !init_color);
     List.iter (List.range 0 (Array.length y_range-1)) ~f:(fun i ->
       let y = y_range.(i) in
       let lower_y = y_range.(succ i) in
