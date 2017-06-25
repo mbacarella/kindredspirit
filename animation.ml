@@ -132,6 +132,21 @@ module Solid_glow = struct
     ; primary_color = Some Color.green }
 end 
 
+module Strobe = struct
+  let ticks = ref 0
+  let color = ref Color.white
+  let update ~rnd t =
+    if !ticks = 0 then
+      color := if rnd then Color.rand () else Option.value_exn t.primary_color;
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <-
+        if !ticks < 50 then !color
+        else Color.black);
+    ticks := (succ !ticks) mod 100
+  let reg = { empty with name = "strobe"; update = update ~rnd:false; primary_color = Some Color.purple }
+  let rnd = { empty with name = "strobe-rnd"; update = update ~rnd:true }
+end
+  
 let rainbow_colors =
   Memo.unit (fun () ->
     Array.init 768 ~f:(fun i ->
@@ -355,6 +370,8 @@ let live_all =
   ; Sticks_rnd.animation
   ; Strip_walk.animation
   ; Slugs.animation
+  ; Strobe.reg
+  ; Strobe.rnd
   ; Rain.animation
   ; Rain_rnd.animation
   ; Scan_dj.reg_animation
