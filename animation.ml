@@ -66,7 +66,7 @@ module Rain = struct
   let ticks = ref 0
   let height = 140.
   let update t =
-    let pos = Float.of_int (!ticks mod (Float.to_int height)) in
+    let pos = Float.of_int ((!ticks/2) mod (Float.to_int height)) in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
 	(let coord = vp.Virtual_pixel.coord in
@@ -85,12 +85,13 @@ module Rain = struct
     ; secondary_color = Some Color.black }
 end
 
+(* TODO: factor me *)
 module Rain_rnd = struct
   let ticks = ref 0
   let height = 140.
   let color = ref (Color.rand ())
   let update t =
-    let pos = Float.of_int (!ticks mod (Float.to_int height)) in
+    let pos = Float.of_int ((!ticks/2) mod (Float.to_int height)) in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <-
 	(let coord = vp.Virtual_pixel.coord in
