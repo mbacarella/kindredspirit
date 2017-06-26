@@ -77,12 +77,12 @@ module Rain = struct
   let ticks = ref 0
   let height = 140.
   let update t =
-    let pos = Float.of_int ((!ticks/2) mod (Float.to_int height)) in
+    let pos = Float.of_int ((!ticks/3) mod (Float.to_int (height *. 1.5))) in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
 	(let coord = vp.Virtual_pixel.coord in
 	 let dist = coord.Coordinate.y -. pos in
-	 if dist < 0. then t.secondary_color
+	 if dist < 0. then Some (Color.shade ~factor:0.05 vp.Virtual_pixel.color)
 	 else if dist < 1. then t.primary_color
 	 else
 	   Option.map t.primary_color ~f:(Color.shade ~factor:((dist /. height) *. 10.))));
@@ -92,18 +92,9 @@ module Rain = struct
     { empty with
       name = "rain"
     ; update
-    ; primary_color = Some (Color.of_hex_int 0x660E6F)
-    ; secondary_color = Some Color.black }
+    ; primary_color = Some (Color.of_hex_int 0x660E6F) }
 end
 
-module Split = struct
-  let update t =
-    iter_pixels t ~f:(fun _ vp ->
-      let d = Float.abs vp.Virtual_pixel.coord.Coordinate.z in
-      let pcolor = Option.value_exn t.primary_color in
-      vp.Virtual_pixel.color <- Color.shade ~factor:(d /. 50.) pcolor)
-  let animation = { empty with name = "split"; update; primary_color = Some Color.green }
-end
 (* TODO: factor me *)
 module Rain_rnd = struct
   let ticks = ref 0
@@ -115,11 +106,11 @@ module Rain_rnd = struct
       vp.Virtual_pixel.color <-
 	(let coord = vp.Virtual_pixel.coord in
 	 let dist = coord.Coordinate.y -. pos in
-	 if dist < 0. then Color.black
-         else if dist < 1. then !color
-	 else Color.shade ~factor:((dist /. height) *. 10.) !color));
-    ticks := (succ !ticks) mod (Float.to_int height);
-    if !ticks = 0 then color := Color.rand ()
+         if dist > 0. && dist < 1. then !color
+	 else
+           Color.shade ~factor:((dist /. height) *. 10.) !color));
+    incr ticks;
+    if !ticks mod 200 = 0 then color := Color.rand ()
     
   let animation =
     { empty with
@@ -128,6 +119,16 @@ module Rain_rnd = struct
     ; primary_color = Some (Color.of_hex_int 0x660E6F) }
 end
 
+
+module Split = struct
+  let update t =
+    iter_pixels t ~f:(fun _ vp ->
+      let d = Float.abs vp.Virtual_pixel.coord.Coordinate.z in
+      let pcolor = Option.value_exn t.primary_color in
+      vp.Virtual_pixel.color <- Color.shade ~factor:(d /. 50.) pcolor)
+  let animation = { empty with name = "split"; update; primary_color = Some Color.green }
+end
+  
 module Solid_glow = struct
   let ticks = ref 0
   let update t =
@@ -151,6 +152,47 @@ module Solid_glow = struct
     ; primary_color = Some Color.green }
 end 
 
+module Solid_beat = struct
+  let max_beat = ref 50.
+  let update t =
+    let beat =
+      let beat = !Beat_detection.beat in
+      if beat < 3.0 then 0.
+      else beat
+    in
+    if beat > !max_beat then max_beat := beat;
+    let color = Option.value_exn t.primary_color in
+    let intensity = beat /. !max_beat in
+    iter_pixels t ~f:(fun _ vp ->
+      vp.Virtual_pixel.color <- Color.shade ~factor:(1.0 -. intensity) color);
+    max_beat := !max_beat *. 0.99 (* slowly re-normalize *)
+    
+  let animation = { empty with name = "solid-beat"; update; primary_color = Some Color.red  }
+end
+
+module Subwoofer = struct
+  let max_beat = ref 0.
+  let update t =
+    let beat =
+      let b = !Beat_detection.beat in
+      if b > 3.0 then b else 0.
+    in
+    if beat > !max_beat then max_beat := beat;
+    let intensity = beat /. !max_beat in
+    let magnitude = intensity *. 320. in
+    iter_pixels t ~f:(fun _ vp ->
+      let dist = Coordinate.dist subs vp.Virtual_pixel.coord in
+      vp.Virtual_pixel.color <-
+        if dist < magnitude then Option.value_exn t.primary_color
+        else Color.shade ~factor:0.9 vp.Virtual_pixel.color);
+    max_beat := !max_beat *. 0.99
+    
+  let animation =
+    { empty with name = "subwoofer"
+    ; update
+    ; primary_color = Some Color.green }
+end
+  
 module Strobe = struct
   let ticks = ref 0
   let color = ref Color.white
@@ -416,6 +458,8 @@ let live_all =
   ; Scan_dj.reg_animation
   ; Scan_dj.rnd_animation
   ; Solid_glow.animation
+  ; Solid_beat.animation
+  ; Subwoofer.animation
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
   ; Radiate_dj.animation

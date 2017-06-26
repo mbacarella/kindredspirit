@@ -152,7 +152,7 @@ module Pixel_pusher_status = struct
     let now = Time.now () in
     List.iteri (Set.to_list expected_controllers) ~f:(fun index controller_id ->
       let x = display_width -. box_width in
-      let y = display_height -. (30. +. ((Float.of_int index) *. box_height)) in
+      let y = display_height -. (40. +. ((Float.of_int index) *. box_height)) in
       let rect_color =
         match Map.find seen_controllers controller_id with
         | None -> (1.0, 0.0, 0.0)    
@@ -164,6 +164,10 @@ module Pixel_pusher_status = struct
       GlDraw.color rect_color;
       GlDraw.rect (x, (y-.2.0)) (x +. 10., y +. 10.);
       text ~color:(0.0, 0.0, 0.0) ~x ~y (sprintf " %d" controller_id))
+end
+
+module Beat_status = struct
+    
 end
   
 let send_frame_to_pixel_pushers a send_updates_t =
@@ -215,6 +219,7 @@ let display ~model ~send_updates_t () =
     let fps = 1.0 /. Time.Span.to_sec (Time.diff now !last_display_time) in
     last_display_time := now;
     text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" fps);
+    text ~x:(display_width -. 40.) ~y:(display_height -. 20.) (sprintf "beat: %.4f" !Beat_detection.beat);
     Gl.flush ();
     Glut.swapBuffers ();
     send_frame_to_pixel_pushers !Live_pane.loaded_animation send_updates_t;
@@ -296,10 +301,9 @@ let gl_main model send_updates_t =
   Glut.mainLoop ()
 
 let main () =
-  Pixel_pusher.start ()
-  >>= fun send_updates_t ->
-  Model.load "model.csv"
-  >>= fun model ->
+  Beat_detection.start () >>= fun () ->
+  Pixel_pusher.start () >>= fun send_updates_t ->
+  Model.load "model.csv" >>= fun model ->
   Preview_pane.loaded_animation := (Animation.init Animation.off model);
   Live_pane.loaded_animation := (Animation.init Animation.off model);
   In_thread.run (fun () -> gl_main model send_updates_t)
