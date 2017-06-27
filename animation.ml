@@ -153,19 +153,16 @@ module Solid_glow = struct
 end 
 
 module Solid_beat = struct
-  let max_beat = ref 50.
   let update t =
     let beat =
       let beat = !Beat_detection.beat in
-      if beat < 3.0 then 0.
+      if beat < 0.3 then 0.
       else beat
     in
-    if beat > !max_beat then max_beat := beat;
     let color = Option.value_exn t.primary_color in
-    let intensity = beat /. !max_beat in
+    let intensity = beat /. 1.0 in
     iter_pixels t ~f:(fun _ vp ->
-      vp.Virtual_pixel.color <- Color.shade ~factor:(1.0 -. intensity) color);
-    max_beat := !max_beat *. 0.99 (* slowly re-normalize *)
+      vp.Virtual_pixel.color <- Color.shade ~factor:(1.0 -. intensity) color)
     
   let animation = { empty with name = "solid-beat"; update; primary_color = Some Color.red  }
 end

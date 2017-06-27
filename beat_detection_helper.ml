@@ -5,15 +5,13 @@ open Core.Std
 module FFT = Fftw3.S
 
 let hz = 44100
-
-let sample_size = 2
-let sample_rate = 100
+let sample_rate = 20
 let num_samples_per_tick = hz / sample_rate
 
 module Spectrogram = struct
   let f2i = Float.to_int
   let i2f = Float.of_int
-  let bands = [| 80; 160; 320; 640; 1280; 2560; 5120; 10240; 22000 |] ;;
+  let bands = [| 60; 320; 640; 1280; 2560; 5120; 10240; 22000 |] ;;
   let nbands = Array.length bands
   let max_freq = bands.(nbands - 1)
   let freq_to_band =
@@ -27,7 +25,7 @@ module Spectrogram = struct
 	    band_index_opt := Some band_index);
       Option.value_exn !band_index_opt)
   let get_array =
-    Memo.unit (fun () -> Array.create (Float.Set.empty) ~len:(Array.length bands))
+    Memo.unit (fun () -> Array.create Float.Set.empty ~len:(Array.length bands))
   let max_y = ref 0.
   let update dft =
     let dft_length = Bigarray.Array1.dim dft in
@@ -47,45 +45,59 @@ module Spectrogram = struct
       hist.(index) <- Set.add hist.(index) power
     done
 end
-  
+
+let setup () =
+  Portaudio.init ();
+  let pulse_device_no =
+    let num_devices = Portaudio.get_device_count () in
+    List.find_exn (List.range 0 num_devices) ~f:(fun device_no ->
+      let device_info = Portaudio.get_device_info device_no in
+      device_info.Portaudio.d_name = "pulse")    
+  in
+  let stream =
+    let instream =
+      { Portaudio.channels = 1
+      ; device = pulse_device_no
+      ; sample_format = Portaudio.format_int16
+      ; latency = 0.00001 }
+    in
+    Portaudio.open_stream (Some instream) None ~interleaved:true (Float.of_int hz) num_samples_per_tick []
+  in
+  Portaudio.start_stream stream;
+  stream
+    
 let main () =
-  let buffer_size = num_samples_per_tick * sample_size in
-  let cmd = "arecord -f S16_LE -t raw -c1 -r44100" in
-  let in_channel = Core.Std.Unix.open_process_in cmd in
-  let buf = String.create buffer_size in
+  let bbuf = [| Array.create ~len:num_samples_per_tick 0 |] in
+  let stream = setup () in
   let rec loop () =
-    match In_channel.really_input in_channel ~pos:0 ~len:buffer_size ~buf with
-      | None -> failwithf "In_channel.really_input: error" ()
-      | Some () ->
-        let beat_magnitude =
-          let dft =
-            let input, output =
-              let create n = FFT.Array1.create FFT.float Bigarray.c_layout n in
-              create num_samples_per_tick,
-              create num_samples_per_tick
-            in
-            let plan = FFT.Array1.r2r FFT.RODFT10 input output ~meas:FFT.Estimate in
-            let float_samples = Array.create 0. ~len:num_samples_per_tick in
-            Bits.s16_le_into_floats buf float_samples;
-            for i = 0 to (Bigarray.Array1.dim input)-1; do
-              input.{i} <- float_samples.(i);
-            done;
-            FFT.exec plan;
-            output
-          in
-          Spectrogram.update dft;
-          let hist = Spectrogram.get_array () in
-          let lowest_band = hist.(0) in
-          let sum = Set.fold lowest_band ~init:0. ~f:( +. ) in
-          let mean = sum /. (Set.length lowest_band |> Float.of_int) in
-          mean *. (Float.of_int sample_rate)
-        in
-        let update = { Beat_detection.beat_magnitude = beat_magnitude } in
-        printf "%s\n%!" (Beat_detection.sexp_of_t update |> Sexp.to_string);
-        loop ()
+    Portaudio.read_stream stream bbuf 0 num_samples_per_tick;
+    let dft =
+      let input, output =
+        let create n = FFT.Array1.create FFT.float Bigarray.c_layout n in
+        create num_samples_per_tick,
+        create num_samples_per_tick
+      in
+      let plan = FFT.Array1.r2r FFT.RODFT10 input output ~meas:FFT.Estimate in
+      let buf = bbuf.(0) in
+      assert (num_samples_per_tick = Bigarray.Array1.dim input);
+      for i=0 to num_samples_per_tick-1; do
+        input.{i} <- Float.of_int buf.(i)
+      done;
+      FFT.exec plan;
+      output
+    in
+    Spectrogram.update dft;
+    let hist = Spectrogram.get_array () in
+    let power =
+      let a = Set.fold hist.(0) ~init:0. ~f:max in
+      let b = Set.fold hist.(1) ~init:0. ~f:max in
+      a +. b /. 2.0
+    in
+    printf "%s\n%!"
+      ({ Beat_detection.beat_magnitude = power } |> Beat_detection.sexp_of_t |> Sexp.to_string);
+    loop ()
   in
   loop ()
-
+    
 let () =
   main ()
-    
