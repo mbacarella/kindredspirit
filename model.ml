@@ -194,6 +194,23 @@ let dup t =
     virtual_pixels = (* force a deep copy *)
       List.map t.virtual_pixels ~f:(fun vp -> { vp with Virtual_pixel.color = vp.Virtual_pixel.color }) }
 
-let print t =
+let dump_sexp t =
   print_endline (sexp_of_t t |> Sexp.to_string_hum)
     
+let dump_csv t =
+  let path = "/tmp/vertices.csv" in
+  printf "*** Dumping virtual pixels to %s...\n" path;
+  let f = Float.to_int in
+  don't_wait_for (
+    Writer.with_file path ~f:(fun writer ->
+      List.iter t.virtual_pixels ~f:(fun vp ->
+        let coord = vp.Virtual_pixel.coord in
+        let s =
+          sprintf "%d;%d;%d;%d,%d,%d\n"
+            vp.Virtual_pixel.controller_id vp.Virtual_pixel.strip_id vp.Virtual_pixel.pixel_id
+            (f coord.Coordinate.x) (f coord.Coordinate.y) (f coord.Coordinate.z)
+        in
+        Writer.write writer s);
+      return ())
+  >>| fun () ->
+  printf "*** Done dumping virtual pixels to %s!\n" path)

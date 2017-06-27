@@ -249,7 +249,8 @@ let key_input model ~key ~x:_ ~y:_ =
     | Some '\r' -> Live_pane.load_animation_from_preview ()
     | Some '\n' -> printf "received line feed?!\n"
     | Some ' ' -> rotating := not !rotating
-    | Some 'D' -> Model.print model
+    | Some 'D' -> Model.dump_sexp model
+    | Some 'C' -> Model.dump_csv model
     | Some 'Q' ->
       printf "*** Shutting down on 'Q' command\n";
       Shutdown.shutdown 0
