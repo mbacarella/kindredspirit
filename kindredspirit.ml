@@ -330,14 +330,12 @@ let () =
     Command.async ~summary:title
       Command.Spec.(empty
                     +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power"
-                    +> flag "-setup-interface" no_arg ~doc:"run ifconfig at first")
-      (fun test_animations setup_interface () ->
-	if test_animations then
-	  Animation.mode := `test;
+                    +> flag "-no-setup-interface" no_arg ~doc:"don't try to set up network interface")
+      (fun test_animations no_setup_interface () ->
+	if test_animations then Animation.mode := `test;
         begin
-          if setup_interface
-          then do_ifconfig ()
-          else return ()
+          if no_setup_interface then return ()
+          else do_ifconfig ()
         end
         >>= fun () -> main ())
   in
