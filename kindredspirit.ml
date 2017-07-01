@@ -309,13 +309,36 @@ let main () =
   Live_pane.loaded_animation := (Animation.init Animation.off model);
   In_thread.run (fun () -> gl_main model send_updates_t)
 
+let do_ifconfig () =
+  let prog, args =
+    let cmd = "/usr/bin/sudo /sbin/ifconfig eth0 10.1.1.120 netmask 255.255.255.0" in
+    let lst = String.split cmd ~on:' ' in
+    List.hd_exn lst, List.tl_exn lst
+  in  
+  Process.create ~prog ~args () >>| fun result ->
+  printf "*** Setup interface: ";
+  try
+    let process = Or_error.ok_exn result in
+    printf "OK\n%!";
+    (* TODO: fix this leak, when I can look up the documentation *)
+    ignore process
+  with e ->
+    printf "%s\n" (Exn.to_string e)
+
 let () =
   let cmd =
     Command.async ~summary:title
-      Command.Spec.(empty +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power")
-      (fun test_animations () ->
+      Command.Spec.(empty
+                    +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power"
+                    +> flag "-setup-interface" no_arg ~doc:"run ifconfig at first")
+      (fun test_animations setup_interface () ->
 	if test_animations then
 	  Animation.mode := `test;
-	main ())
+        begin
+          if setup_interface
+          then do_ifconfig ()
+          else return ()
+        end
+        >>= fun () -> main ())
   in
   Command.run cmd
