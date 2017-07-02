@@ -3,14 +3,15 @@ open! Async.Std
 
 let title = "Kindred Spirit Lighting Console"
 
+(*
 (* Thinkpad T420 *)
 let display_width = 1600.0
 let display_height = 880.0
+*)
   
-(* (* Thinkpad SL410 *)
+(* Thinkpad SL410 *)
 let display_width = 1366.0
 let display_height = 758.0
-*)
   
 let target_fps = 50.
 let display_interval = sec (1. /. target_fps)
@@ -301,8 +302,9 @@ let gl_main model send_updates_t =
   Glut.passiveMotionFunc ~cb:mouse_motion;
   Glut.mainLoop ()
 
-let main () =
-  Beat_detection.start () >>= fun () ->
+let main ~no_beat_detection () =
+  (if not no_beat_detection then Beat_detection.start ()
+   else return ()) >>= fun () ->
   Pixel_pusher.start () >>= fun send_updates_t ->
   Model.load "model.csv" >>= fun model ->
   Preview_pane.loaded_animation := (Animation.init Animation.off model);
@@ -330,13 +332,14 @@ let () =
     Command.async ~summary:title
       Command.Spec.(empty
                     +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power"
-                    +> flag "-no-setup-interface" no_arg ~doc:"don't try to set up network interface")
-      (fun test_animations no_setup_interface () ->
+                    +> flag "-no-setup-interface" no_arg ~doc:"don't try to set up network interface"
+                    +> flag "-no-beat-detection" no_arg ~doc:"disable beat detection")
+      (fun test_animations no_setup_interface no_beat_detection () ->
 	if test_animations then Animation.mode := `test;
         begin
           if no_setup_interface then return ()
           else do_ifconfig ()
         end
-        >>= fun () -> main ())
+        >>= fun () -> main ~no_beat_detection ())
   in
   Command.run cmd

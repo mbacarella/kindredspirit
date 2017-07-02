@@ -33,8 +33,8 @@ module Spectrogram = struct
       if !max_y < dft.{i} then max_y := dft.{i}
     done;
     let hist = get_array () in
-    let freq_scale = 
-      (Float.of_int max_freq) 
+    let freq_scale =
+      (Float.of_int max_freq)
       /. (Float.of_int num_samples_per_tick)
     in
     Array.fill hist ~pos:0 ~len:(Array.length hist) (Float.Set.empty);
@@ -46,13 +46,25 @@ module Spectrogram = struct
     done
 end
 
+let dump_available_devices () =
+  let num = Portaudio.get_device_count () in
+  List.iter (List.range 0 num) ~f:(fun i ->
+    let info = Portaudio.get_device_info i in
+    eprintf "%d: %s\n" i info.Portaudio.d_name)
+
 let setup () =
   Portaudio.init ();
   let pulse_device_no =
     let num_devices = Portaudio.get_device_count () in
-    List.find_exn (List.range 0 num_devices) ~f:(fun device_no ->
-      let device_info = Portaudio.get_device_info device_no in
-      device_info.Portaudio.d_name = "pulse")    
+    try
+      List.find_exn (List.range 0 num_devices) ~f:(fun device_no ->
+        let device_info = Portaudio.get_device_info device_no in
+        device_info.Portaudio.d_name = "pulse")
+    with
+      | Not_found ->
+        eprintf "*** Couldn't find device.  List of available devices:\n%!";
+        dump_available_devices ();
+        exit 1
   in
   let stream =
     let instream =
@@ -65,7 +77,7 @@ let setup () =
   in
   Portaudio.start_stream stream;
   stream
-    
+
 let main () =
   let bbuf = [| Array.create ~len:num_samples_per_tick 0 |] in
   let stream = setup () in
@@ -98,6 +110,6 @@ let main () =
     loop ()
   in
   loop ()
-    
+
 let () =
   main ()
