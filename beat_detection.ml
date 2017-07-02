@@ -19,8 +19,8 @@ let rec reader_loop ~reader ~err_reader =
       beat := t.beat_magnitude;
       reader_loop ~reader ~err_reader
         
-let start () =
-  Process.create ~prog:exe ~args:[] ()
+let start ~sound_dev =
+  Process.create ~prog:exe ~args:[sound_dev] ()
   >>| fun result ->
   let subprocess = Or_error.ok_exn result in
   let reader = Process.stdout subprocess in

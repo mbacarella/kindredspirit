@@ -302,8 +302,8 @@ let gl_main model send_updates_t =
   Glut.passiveMotionFunc ~cb:mouse_motion;
   Glut.mainLoop ()
 
-let main ~no_beat_detection () =
-  (if not no_beat_detection then Beat_detection.start ()
+let main ~no_beat_detection ~sound_dev =
+  (if not no_beat_detection then Beat_detection.start ~sound_dev
    else return ()) >>= fun () ->
   Pixel_pusher.start () >>= fun send_updates_t ->
   Model.load "model.csv" >>= fun model ->
@@ -334,9 +334,10 @@ let () =
     Command.async ~summary:title
       Command.Spec.(empty
                     +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power"
-                    +> flag "-no-beat-detection" no_arg ~doc:"disable beat detection")
-      (fun test_animations no_beat_detection () ->
+                    +> flag "-no-beat-detection" no_arg ~doc:"disable beat detection"
+                    +> flag "-sound-dev" (optional_with_default "default" string) ~doc:"<device> specify sound device")
+      (fun test_animations no_beat_detection sound_dev () ->
 	if test_animations then Animation.mode := `test;
-        main ~no_beat_detection ())
+        main ~no_beat_detection ~sound_dev)
   in
   Command.run cmd

@@ -52,14 +52,14 @@ let dump_available_devices () =
     let info = Portaudio.get_device_info i in
     eprintf "%d: %s\n" i info.Portaudio.d_name)
 
-let setup () =
+let setup ~sound_dev =
   Portaudio.init ();
   let pulse_device_no =
     let num_devices = Portaudio.get_device_count () in
     try
       List.find_exn (List.range 0 num_devices) ~f:(fun device_no ->
         let device_info = Portaudio.get_device_info device_no in
-        device_info.Portaudio.d_name = "pulse")
+        device_info.Portaudio.d_name = sound_dev)
     with
       | Not_found ->
         eprintf "*** Couldn't find device.  List of available devices:\n%!";
@@ -78,9 +78,9 @@ let setup () =
   Portaudio.start_stream stream;
   stream
 
-let main () =
+let main ~sound_dev =
   let bbuf = [| Array.create ~len:num_samples_per_tick 0 |] in
-  let stream = setup () in
+  let stream = setup ~sound_dev in
   let rec loop () =
     Portaudio.read_stream stream bbuf 0 num_samples_per_tick;
     let dft =
@@ -112,4 +112,4 @@ let main () =
   loop ()
 
 let () =
-  main ()
+  main ~sound_dev:Sys.argv.(1)

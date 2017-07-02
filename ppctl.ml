@@ -13,12 +13,10 @@ let iter_pixels_set_color f =
     Pixel_pusher.Strip.set_pixel strip ~color:(f ()) ~index)
 
 let pp_basic f =
-  Beat_detection.start () >>= fun () ->
   Pixel_pusher.start () >>= fun uph ->
   let rec loop () =
     f ();
     Pixel_pusher.send_updates uph;
-    printf "beat: %f\n%!" !Beat_detection.beat;
     Clock.after (sec 0.02) >>= loop
   in
   loop ()

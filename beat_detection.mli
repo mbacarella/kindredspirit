@@ -7,4 +7,4 @@ type t = { beat_magnitude : float } [@@deriving sexp]
 val beat : float ref
 
 (* Start beat detection subprocess.  Uses Async behind the scenes. *)
-val start : unit -> unit Deferred.t
+val start : sound_dev:string -> unit Deferred.t
