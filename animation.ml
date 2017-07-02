@@ -8,7 +8,7 @@ type t =
     ; mutable secondary_color : Color.t option }
 
 let dj = { Coordinate.x=140.; y=30.; z=(-40.) }
-let subs = { Coordinate.x=140.; y=150.; z=(-40.) }
+(*let subs = { Coordinate.x=140.; y=150.; z=(-40.) }*)
 
 let init t model =
   { t with model = Some (Model.dup model) }
@@ -167,6 +167,45 @@ module Solid_beat = struct
   let animation = { empty with name = "solid-beat"; update; primary_color = Some Color.red  }
 end
 
+module Waveform = struct
+  let update t f =
+    let pcm_data = Waveform.pcm_data in
+    let pcm_data_len = Array.length pcm_data in
+    let index = !Waveform.index in
+    iter_pixels t ~f:(fun _ vp ->
+      let dist = min ((Coordinate.dist dj vp.Virtual_pixel.coord |> Float.to_int) / 3 ) pcm_data_len in
+      let power =
+        let circ_index =
+          if dist > index
+          then pcm_data_len - (dist-index)
+          else index - dist
+        in
+        pcm_data.(circ_index)
+      in
+      vp.Virtual_pixel.color <- f ~dist ~power)
+
+  let update_intensity t =
+    let sample_max = 32768.0 in
+    let color = Option.value_exn t.primary_color in
+    update t (fun ~dist:_ ~power ->
+      let intensity = (Float.of_int power) /. sample_max in
+      Color.shade ~factor:(1.0 -. intensity) color)
+      
+  let update_rgb t =
+    update t (fun ~dist:_ ~power ->
+      let color =
+        if power > 5000 then Color.blue
+        else if power > 2500 then Color.purple
+        else if power > 1000 then Color.green
+        else if power > 500 then Color.red
+        else Color.black
+      in
+      color) 
+  let anim_intensity = { empty with name = "waveform"; update=update_intensity; primary_color = Some Color.purple }
+  let anim_rgb = { empty with name = "waveform-rgb"; update=update_rgb }
+end
+  
+(*
 module Subwoofer = struct
   let max_beat = ref 0.
   let update t =
@@ -189,7 +228,8 @@ module Subwoofer = struct
     ; update
     ; primary_color = Some Color.green }
 end
-
+*)
+  
 module Strobe = struct
   let ticks = ref 0
   let color = ref Color.white
@@ -456,7 +496,8 @@ let live_all =
   ; Scan_dj.rnd_animation
   ; Solid_glow.animation
   ; Solid_beat.animation
-  ; Subwoofer.animation
+  ; Waveform.anim_intensity
+  ; Waveform.anim_rgb
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
   ; Radiate_dj.animation

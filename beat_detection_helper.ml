@@ -46,43 +46,11 @@ module Spectrogram = struct
     done
 end
 
-let dump_available_devices () =
-  let num = Portaudio.get_device_count () in
-  List.iter (List.range 0 num) ~f:(fun i ->
-    let info = Portaudio.get_device_info i in
-    eprintf "%d: %s\n" i info.Portaudio.d_name)
-
-let setup ~sound_dev =
-  Portaudio.init ();
-  let pulse_device_no =
-    let num_devices = Portaudio.get_device_count () in
-    try
-      List.find_exn (List.range 0 num_devices) ~f:(fun device_no ->
-        let device_info = Portaudio.get_device_info device_no in
-        device_info.Portaudio.d_name = sound_dev)
-    with
-      | Not_found ->
-        eprintf "*** Couldn't find device.  List of available devices:\n%!";
-        dump_available_devices ();
-        exit 1
-  in
-  let stream =
-    let instream =
-      { Portaudio.channels = 1
-      ; device = pulse_device_no
-      ; sample_format = Portaudio.format_int16
-      ; latency = 0.00001 }
-    in
-    Portaudio.open_stream (Some instream) None ~interleaved:true (Float.of_int hz) num_samples_per_tick []
-  in
-  Portaudio.start_stream stream;
-  stream
-
 let main ~sound_dev =
   let bbuf = [| Array.create ~len:num_samples_per_tick 0 |] in
-  let stream = setup ~sound_dev in
+  let audio = Audio.init ~hz ~num_samples_per_read:num_samples_per_tick ~sound_dev in
   let rec loop () =
-    Portaudio.read_stream stream bbuf 0 num_samples_per_tick;
+    Audio.read audio bbuf;
     let dft =
       let input, output =
         let create n = FFT.Array1.create FFT.float Bigarray.c_layout n in

@@ -6,7 +6,7 @@ let white = { r=255; g=255; b=255 }
 let green = { r=0; g=255; b=0 }
 let red = { r=255; g=0; b=0 }
 let blue = { r=0; g=0; b=255 }
-let purple = { r=14; g=111; b=102 }
+let purple = { r=0x80; g=0x00; b=0x80 }
 let of_hex_int i =
   { r=(i lsr 16) land 0xFF
   ; g=(i lsr 8) land 0xFF

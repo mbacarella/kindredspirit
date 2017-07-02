@@ -302,32 +302,19 @@ let gl_main model send_updates_t =
   Glut.passiveMotionFunc ~cb:mouse_motion;
   Glut.mainLoop ()
 
+let start_waveform_listener ~sound_dev =
+  don't_wait_for (In_thread.run (fun () ->
+    Waveform.start ~sound_dev))
+  
 let main ~no_beat_detection ~sound_dev =
   (if not no_beat_detection then Beat_detection.start ~sound_dev
    else return ()) >>= fun () ->
+  start_waveform_listener ~sound_dev;
   Pixel_pusher.start () >>= fun send_updates_t ->
   Model.load "model.csv" >>= fun model ->
   Preview_pane.loaded_animation := (Animation.init Animation.off model);
   Live_pane.loaded_animation := (Animation.init Animation.off model);
   In_thread.run (fun () -> gl_main model send_updates_t)
-
-(* (* probably should handle this in a wrapper *)
-let do_ifconfig () =
-  let prog, args =
-    let cmd = "/usr/bin/sudo /sbin/ifconfig eth0 10.1.1.120 netmask 255.255.255.0" in
-    let lst = String.split cmd ~on:' ' in
-    List.hd_exn lst, List.tl_exn lst
-  in
-  Process.create ~prog ~args () >>| fun result ->
-  printf "*** Setup interface: ";
-  try
-    let process = Or_error.ok_exn result in
-    printf "OK\n%!";
-    (* TODO: fix this leak, when I can look up the documentation *)
-    ignore process
-  with e ->
-    printf "%s\n" (Exn.to_string e)
-*)
     
 let () =
   let cmd =
