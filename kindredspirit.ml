@@ -311,6 +311,7 @@ let main ~no_beat_detection () =
   Live_pane.loaded_animation := (Animation.init Animation.off model);
   In_thread.run (fun () -> gl_main model send_updates_t)
 
+(* (* probably should handle this in a wrapper *)
 let do_ifconfig () =
   let prog, args =
     let cmd = "/usr/bin/sudo /sbin/ifconfig eth0 10.1.1.120 netmask 255.255.255.0" in
@@ -326,20 +327,16 @@ let do_ifconfig () =
     ignore process
   with e ->
     printf "%s\n" (Exn.to_string e)
-
+*)
+    
 let () =
   let cmd =
     Command.async ~summary:title
       Command.Spec.(empty
                     +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power"
-                    +> flag "-no-setup-interface" no_arg ~doc:"don't try to set up network interface"
                     +> flag "-no-beat-detection" no_arg ~doc:"disable beat detection")
-      (fun test_animations no_setup_interface no_beat_detection () ->
+      (fun test_animations no_beat_detection () ->
 	if test_animations then Animation.mode := `test;
-        begin
-          if no_setup_interface then return ()
-          else do_ifconfig ()
-        end
-        >>= fun () -> main ~no_beat_detection ())
+        main ~no_beat_detection ())
   in
   Command.run cmd
