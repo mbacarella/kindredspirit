@@ -1,5 +1,5 @@
-open Core.Std
-open Async.Std
+open Core
+open Async
 
 let summary = "Pixel Pusher control util"
 
@@ -22,7 +22,7 @@ let pp_basic f =
     Clock.after (sec 0.02) >>= loop
   in
   loop ()
-    
+
 module Set = struct
   module All = struct
     let set_all ~color =
@@ -38,7 +38,7 @@ module Set = struct
     Command.group ~summary:"set strip(s) to a color"
       [ "all", All.cmd ]
 end
-  
+
 let () =
   let cmd =
     Command.group ~summary:"Pixel Pusher control util"

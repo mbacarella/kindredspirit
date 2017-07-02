@@ -1,5 +1,5 @@
-open! Core.Std
-  
+open! Core
+
 type t =
     { name : string
     ; update : (t -> unit)
@@ -9,7 +9,7 @@ type t =
 
 let dj = { Coordinate.x=140.; y=30.; z=(-40.) }
 let subs = { Coordinate.x=140.; y=150.; z=(-40.) }
-  
+
 let init t model =
   { t with model = Some (Model.dup model) }
 
@@ -25,7 +25,7 @@ let iter_pixels ~f =
 let empty = { name="empty"; update=ignore; model=None; primary_color=None; secondary_color=None }
 let off_animation = { empty with name="off" }
 let off = off_animation
-  
+
 let solid_animation =
   { empty with
     name = "solid"
@@ -66,13 +66,13 @@ module Sticks_rnd = struct
     iter_pixels t ~f:(fun _ vp ->
 	vp.Virtual_pixel.color <- (!colors).(vp.Virtual_pixel.controller_id * 8 + vp.Virtual_pixel.strip_id));
     ticks := (succ !ticks) mod 100
- 
+
   let animation =
     { empty with
       name = "sticks-rnd"
     ; update }
 end
-  
+
 module Rain = struct
   let ticks = ref 0
   let height = 140.
@@ -87,7 +87,7 @@ module Rain = struct
 	 else
 	   Option.map t.primary_color ~f:(Color.shade ~factor:((dist /. height) *. 10.))));
     incr ticks
-      
+
   let animation =
     { empty with
       name = "rain"
@@ -111,7 +111,7 @@ module Rain_rnd = struct
            Color.shade ~factor:((dist /. height) *. 10.) !color));
     incr ticks;
     if !ticks mod 200 = 0 then color := Color.rand ()
-    
+
   let animation =
     { empty with
       name = "rain-rnd"
@@ -128,7 +128,7 @@ module Split = struct
       vp.Virtual_pixel.color <- Color.shade ~factor:(d /. 50.) pcolor)
   let animation = { empty with name = "split"; update; primary_color = Some Color.green }
 end
-  
+
 module Solid_glow = struct
   let ticks = ref 0
   let update t =
@@ -150,7 +150,7 @@ module Solid_glow = struct
       name = "solidglow"
     ; update
     ; primary_color = Some Color.green }
-end 
+end
 
 module Solid_beat = struct
   let update t =
@@ -163,7 +163,7 @@ module Solid_beat = struct
     let intensity = beat /. 1.0 in
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Color.shade ~factor:(1.0 -. intensity) color)
-    
+
   let animation = { empty with name = "solid-beat"; update; primary_color = Some Color.red  }
 end
 
@@ -183,13 +183,13 @@ module Subwoofer = struct
         if dist < magnitude then Option.value_exn t.primary_color
         else Color.shade ~factor:0.9 vp.Virtual_pixel.color);
     max_beat := !max_beat *. 0.99
-    
+
   let animation =
     { empty with name = "subwoofer"
     ; update
     ; primary_color = Some Color.green }
 end
-  
+
 module Strobe = struct
   let ticks = ref 0
   let color = ref Color.white
@@ -204,7 +204,7 @@ module Strobe = struct
   let reg = { empty with name = "strobe"; update = update ~rnd:false; primary_color = Some Color.purple }
   let rnd = { empty with name = "strobe-rnd"; update = update ~rnd:true }
 end
-  
+
 let rainbow_colors =
   Memo.unit (fun () ->
     Array.init 768 ~f:(fun i ->
@@ -242,18 +242,18 @@ module Rainbow_dj = struct
     let colsl = Array.length cols in
     iter_pixels t ~f:(fun _ vp ->
       let d = Coordinate.dist dj (Virtual_pixel.coord vp) |> Float.to_int in
-      let index = (!i*2 + d*3) mod colsl in 
+      let index = (!i*2 + d*3) mod colsl in
       vp.Virtual_pixel.color <- cols.(index)
     );
     incr i
-      
+
   let animation =
     { empty with name = "rainbow-dj"; update }
 end
 
 module Radiate_dj = struct
   let ticks = ref 0
-    
+
   let update t =
     let i = Float.of_int !ticks in
     iter_pixels t ~f:(fun _ vp ->
@@ -263,7 +263,7 @@ module Radiate_dj = struct
 	else if d >= (i +. 40.) && d < (i +. 80.) then Option.value_exn t.secondary_color
 	else Color.black);
     ticks := (succ !ticks) mod 200
-      
+
   let animation =
     { empty with name="radiate-dj"
     ; update
@@ -296,7 +296,7 @@ module Scan_dj = struct
     { empty with name="scan-dj-rnd"
     ; update = update ~rnd:true }
 end
-  
+
 module Strip_walk = struct
   let ticks = ref 0
   let update t =
@@ -306,13 +306,13 @@ module Strip_walk = struct
         if vp.Virtual_pixel.pixel_id = id then Option.value_exn t.primary_color
         else Option.value_exn t.secondary_color);
     ticks := (succ !ticks) mod 1000
-      
+
   let animation =
     { empty with name="strip-walk"
     ; primary_color = Some Color.green
-    ; secondary_color = Some Color.{r=0x66; g=0x66; b=0x66 } 
+    ; secondary_color = Some Color.{r=0x66; g=0x66; b=0x66 }
     ; update }
-end 
+end
 
 module Slugs = struct
   let ticks = ref 0
@@ -326,9 +326,9 @@ module Slugs = struct
 
   let animation =
     { empty with name="slugs"
-    ; primary_color = Some Color.green 
+    ; primary_color = Some Color.green
     ; update }
-end 
+end
 
 (*
 module Layers = struct
@@ -348,7 +348,7 @@ module Layers = struct
   let animation = { empty with name = "layers"; update }
 end
 *)
-  
+
 (* let y_buckets = *)
 (*   (\* Bucket pixels along y axis *\) *)
 (*   Memo.general (fun t -> *)
@@ -370,7 +370,7 @@ end
 module Flame = struct
   let ticks = ref 0
   let init_color = ref (Color.rand ())
-    
+
   let update t =
     (* memo some of this *)
     let map =
@@ -395,7 +395,7 @@ module Flame = struct
     let row y = Map.find_exn map y in
 
     if !ticks mod 10 = 0 then init_color := Color.rand ();
-    
+
     Array.iter (row max_y) ~f:(fun vp -> vp.Virtual_pixel.color <- !init_color);
     List.iter (List.range 0 (Array.length y_range-1)) ~f:(fun i ->
       let y = y_range.(i) in
@@ -418,7 +418,7 @@ module Flame = struct
   let animation =
     { empty with name="flame"
     ; primary_color = Some (Color.rand ())
-    ; update } 
+    ; update }
 end
 
 module Pixelate = struct
@@ -432,10 +432,10 @@ module Pixelate = struct
     incr ticks;
     if !ticks mod 650 = 0 then incr cluster_size;
     if !cluster_size > 10 then cluster_size := 1
-      
+
   let animation =
     { empty with name="pixelate"
-     ; update } 
+     ; update }
 end
 
 let live_all =
@@ -480,7 +480,7 @@ let test_all () =
       ; secondary_color = Some Color.black }))
 
 let mode = ref `live
-  
+
 let all = Memo.unit (fun () ->
   match !mode with
     | `live -> live_all

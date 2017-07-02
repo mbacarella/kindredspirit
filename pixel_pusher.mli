@@ -17,8 +17,8 @@
   (e.g. by calling UNIX sleep until the next display tick).
 *)
 
-open Core.Std
-open Async.Std
+open Core
+open Async
 
 module Controller_report : sig
   type t =
@@ -51,10 +51,10 @@ val get_strips : unit -> Strip.t list
 
 (* Like get_strips, but strips are indexed by (controller_id, strip_id) *)
 val get_strips_as_map : unit -> (int * int, Strip.t) Map.Poly.t
-  
+
 (* Instructs subsystem to release any pending updates.
-   Do this every time you've finished creating your "frame". 
-   You can only call this from async. *) 
+   Do this every time you've finished creating your "frame".
+   You can only call this from async. *)
 val send_updates : send_updates_t -> unit
 
 (* Same as above, but for calling from inside of an In_thread (such as the glut display func) *)

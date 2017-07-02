@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 
 let s16_le_into_floats s floats =
   let slen = String.length s in

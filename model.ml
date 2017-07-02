@@ -1,5 +1,5 @@
-open! Core.Std
-open! Async.Std
+open! Core
+open! Async
 
 module Virtual_strip = struct
   type t =
@@ -135,10 +135,10 @@ let rasterize strips =
   in
   printf "*** Converted %d strips to %d pixels\n" (List.length strips) (List.length pixels);
   pixels
-	  
+
 let load path =
   Reader.file_lines path >>| fun lines ->
-  let virtual_strips = 
+  let virtual_strips =
     List.filter_map lines ~f:(fun line ->
       let line = String.strip line in
       if line = "" || line.[0] = '#' then None
@@ -196,7 +196,7 @@ let dup t =
 
 let dump_sexp t =
   print_endline (sexp_of_t t |> Sexp.to_string_hum)
-    
+
 let dump_csv t =
   let path = "/tmp/vertices.csv" in
   printf "*** Dumping virtual pixels to %s...\n" path;

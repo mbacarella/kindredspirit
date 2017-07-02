@@ -1,5 +1,5 @@
-open! Core.Std
-open! Async.Std
+open! Core
+open! Async
 
 let discovery_port = 7331
 let command_port = 9897
@@ -51,7 +51,7 @@ module Beacon = struct
       ; fixed_size : bool (* requires every datagram same size *)
       (* last host and port to drive this PP *)
       ; last_driven_ip : string
-      ; last_driven_port : int 
+      ; last_driven_port : int
       }
   [@@deriving sexp]
 
@@ -62,7 +62,7 @@ module Beacon = struct
 	; device_type : 8
 	; protocol_version : 8
 	; vendor_id : 16 : littleendian
-	; product_id : 16 : littleendian 
+	; product_id : 16 : littleendian
 	; hw_revision : 16 : littleendian
 	; sw_revision : 16 : littleendian
 	; link_speed : 32 : littleendian
@@ -112,7 +112,7 @@ module Beacon = struct
 	{ mac_address; ip_address; device_type; protocol_version; vendor_id; product_id
 	; hw_revision; sw_revision; link_speed = to_int link_speed; strips_attached; max_strips_per_packet
 	; pixels_per_strip; update_period; power_total = to_int power_total
-	; delta_sequence = to_int delta_sequence ; controller_ordinal = to_int controller_ordinal 
+	; delta_sequence = to_int delta_sequence ; controller_ordinal = to_int controller_ordinal
 	; group_ordinal = to_int group_ordinal; my_port; strip_info; protected; fixed_size
 	; last_driven_ip; last_driven_port }
 end
@@ -145,10 +145,10 @@ module Pusher_state = struct
   type t =
       { beacon_time : Time.t
       ; beacon      : Beacon.t
-      ; mutable seq : int 
+      ; mutable seq : int
       ; matrix      : Color.t Array.t
       ; mutable last_command : Time.t
-      ; socket      : Core.Std.Unix.File_descr.t }
+      ; socket      : Core.Unix.File_descr.t }
   let known_pushers = String.Table.create ()
   let strips = ref []
   let strips_map = ref Map.Poly.empty
@@ -172,7 +172,7 @@ module Pusher_state = struct
     in
     strips := strips';
     strips_map := strips_map'
-      
+
   let drop_missing_pushers () =
     let threshold = sec 60. in
     let now = Time.now () in
@@ -187,7 +187,7 @@ module Pusher_state = struct
       printf "*** Forgetting about Pixel Pusher %s, hasn't been seen in awhile (>%s)\n%!"
 	key (Time.Span.to_string threshold);
       (* Wait 10s to close the socket, just in case we have packets queued *)
-      don't_wait_for (Clock.after (sec 10.) >>| fun () -> Core.Std.Unix.close socket);
+      don't_wait_for (Clock.after (sec 10.) >>| fun () -> Core.Unix.close socket);
       Hashtbl.remove known_pushers key);
     if List.length drop > 0 then
       update ()
@@ -199,7 +199,7 @@ let send_now_or_soon pusher sendfun =
   let update_period = pusher.Pusher_state.beacon.Beacon.update_period in
   let run_at = Time.add pusher.Pusher_state.last_command update_period in
   if Time.(<) run_at (Time.now ()) then begin
-    pusher.Pusher_state.last_command <- Time.now (); 
+    pusher.Pusher_state.last_command <- Time.now ();
     sendfun ()
   end else begin
     let overrun_span = sec 0.1 in
@@ -211,7 +211,7 @@ let send_now_or_soon pusher sendfun =
       pusher.Pusher_state.last_command <- run_at;
       don't_wait_for (Clock.at run_at >>| sendfun)
     end
-  end  
+  end
 
 let send_pixels_to_pushers () =
   Hashtbl.iteri Pusher_state.known_pushers ~f:(fun ~key:ip ~data:pusher ->
@@ -253,7 +253,7 @@ let send_pixels_to_pushers () =
 	  buf.[pixels_base + pixel_num*3 + 2] <- char (Color.b pixel)
 	done);
       send_now_or_soon pusher (fun () ->
-	let bytes_sent = Core.Std.Unix.sendto socket ~buf ~pos:0 ~len:packet_size ~mode:[] ~addr in
+	let bytes_sent = Core.Unix.sendto socket ~buf ~pos:0 ~len:packet_size ~mode:[] ~addr in
 	if bytes_sent < packet_size then
 	  failwithf "Failed to send %d bytes to %s (%d bytes short)"
 	    bytes_sent ip (String.length buf - bytes_sent) ()));
@@ -272,10 +272,10 @@ let setup_refresh_loop_for_non_async read_fd =
   in
   let fd = Fd.create Fd.Kind.Fifo read_fd (Info.of_string "nurple") in
   Fd.clear_nonblock fd;
-  wait_for_refresh (Reader.create fd)  
+  wait_for_refresh (Reader.create fd)
 
-type send_updates_t = Core.Std.Unix.File_descr.t
-    
+type send_updates_t = Core.Unix.File_descr.t
+
 let send_updates _send_updates_t =
   (* TODO: go boom if this is called from a non-async thread *)
   send_pixels_to_pushers ()
@@ -283,7 +283,7 @@ let send_updates _send_updates_t =
 let send_updates_from_non_async_thread fd =
   (* TODO: go boom if this is called from an async thread *)
   let buf = "r" in
-  if Core.Std.Unix.write fd ~buf ~pos:0 ~len:1 <> 1 then
+  if Core.Unix.write fd ~buf ~pos:0 ~len:1 <> 1 then
     failwithf "couldn't write one char to update fd" ()
 
 let get_controllers () =
@@ -294,7 +294,7 @@ let get_controllers () =
     ; group_id = beacon.Beacon.group_ordinal
     ; update_period = beacon.Beacon.update_period
     ; last_beacon = data.Pusher_state.beacon_time })
-    
+
 let get_strips () =
   !Pusher_state.strips
 
@@ -333,11 +333,11 @@ let start_discovery_listener () =
 		  ; seq = 0
 		  ; matrix = matrix
 		  ; last_command = Time.epoch
-		  ; socket = Core.Std.Unix.socket ~domain:Core.Std.Unix.PF_INET ~kind:Core.Std.Unix.SOCK_DGRAM ~protocol:0 };
+		  ; socket = Core.Unix.socket ~domain:Core.Unix.PF_INET ~kind:Core.Unix.SOCK_DGRAM ~protocol:0 };
 	  Pusher_state.update ())
 
 let start () =
-  let read_fd, write_fd = Core.Std.Unix.pipe () in
+  let read_fd, write_fd = Core.Unix.pipe () in
   don't_wait_for (setup_refresh_loop_for_non_async read_fd);
   don't_wait_for (start_discovery_listener ());
   Clock.every (sec 1.) Pusher_state.drop_missing_pushers;

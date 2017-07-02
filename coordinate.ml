@@ -1,5 +1,5 @@
-open! Core.Std
-  
+open! Core
+
 type t = { x : float; y : float; z : float } [@@deriving sexp, fields]
 let dist a b =
   let dx = b.x -. a.x in

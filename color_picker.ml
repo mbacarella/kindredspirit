@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 
 let gl_init () =
   GlArray.enable `color;
@@ -14,7 +14,7 @@ type t =
 
 let create ~x ~y ~width ~height =
   { x; y; width; height; kind=`NA }
-    
+
 (* Adapted from https://gist.github.com/mjackson/5311256 *)
 let hue_to_rgb ~p ~q ~t =
   let t = if t < 0. then t +. 1. else t in
@@ -68,7 +68,7 @@ let draw_square ~x ~y =
   GlDraw.vertex ~x:(x +. 5.) ~y:(y +. 5.) ();
   GlDraw.vertex ~x:(x -. 5.) ~y:(y +. 5.) ();
   GlDraw.ends ()
-    
+
 let display_selections t =
   match t.kind with
     | `NA -> ()
@@ -82,7 +82,7 @@ let color_picker_elements =
   Memo.general (fun (x, y, width, height) ->
     let colors = Raw.create_static `float ~len:(cells_total * 3) in
     let vertices = Raw.create_static `float ~len:(cells_total * 2) in
-    let set a i v = Raw.set_float a ~pos:i v in 
+    let set a i v = Raw.set_float a ~pos:i v in
     hsl_iter (fun ~i ~h ~s ~l ->
       let r, g, b = hsl_to_rgb ~h ~l ~s in
       set colors (i*3) r;
@@ -111,7 +111,7 @@ let display t =
       GlArray.draw_arrays `points ~first:0 ~count:cells_total
   end;
   display_selections t
-  
+
 let get_primary t =
   match t.kind with
     | `NA -> None
@@ -138,7 +138,7 @@ let maybe_set_primary t ~x ~y =
 let maybe_set_secondary t ~x ~y =
   match color_at_xy t ~x ~y with
     | None -> ()
-    | Some _c -> 
+    | Some _c ->
       match t.kind with
 	| `NA | `Primary _ -> ()
 	| `Primary_and_secondary (a, _) ->
@@ -174,4 +174,3 @@ let reset t a =
     | None, Some _ ->
       failwithf "animation '%s' has a secondary color but no primary"
 	a.Animation.name ()
-	

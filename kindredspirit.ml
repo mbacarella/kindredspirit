@@ -1,17 +1,17 @@
-open! Core.Std
-open! Async.Std
+open! Core
+open! Async
 
 let title = "Kindred Spirit Lighting Console"
 
 (* Thinkpad T420 *)
 let display_width = 1600.0
 let display_height = 880.0
-  
+
 (* (* Thinkpad SL410 *)
 let display_width = 1366.0
 let display_height = 758.0
 *)
-  
+
 let target_fps = 50.
 let display_interval = sec (1. /. target_fps)
 let num_display_calls = ref 0
@@ -21,7 +21,7 @@ let mouse_x = ref 0.
 let mouse_y = ref 0.
 let mouse_down_left = ref false
 let mouse_down_right = ref false
-  
+
 let reshape ~w ~h =
   (* The actual "world" stays fixed to display_width and display_height
      even if the user resizes. *)
@@ -43,7 +43,7 @@ let text ?(color=(1.0, 1.0, 1.0)) ?size ~x ~y s =
     Glut.bitmapCharacter ~font ~c) s;
   GlMat.pop ()
 
- 
+
 module List_pane = struct
   let height = 10.
   let width = 150.
@@ -91,7 +91,7 @@ let display_model =
 	~z:coord.Coordinate.z ());
     GlDraw.ends ();
     GlMat.pop ())
-    
+
 let load_colors_from_picker a cp =
   begin match a.Animation.primary_color, Color_picker.get_primary cp with
     | Some _, Some c -> a.Animation.primary_color <- Some c
@@ -128,7 +128,7 @@ end
 module Live_pane = struct
   let x = List_pane.width +. Preview_pane.width +. 10.
   let y = 0.
-  let width = display_width -. x 
+  let width = display_width -. x
   let loaded_animation = ref Animation.off
   let color_picker = Color_picker.create ~x ~y ~width ~height:180.
   let load_animation_from_preview () =
@@ -142,7 +142,7 @@ end
 module Pixel_pusher_status = struct
   let display model =
     let module Controller_report = Pixel_pusher.Controller_report in
-    let expected_controllers = model.Model.controller_ids in    
+    let expected_controllers = model.Model.controller_ids in
     let seen_controllers =
       List.fold_left (Pixel_pusher.get_controllers ()) ~init:Int.Map.empty ~f:(fun map c ->
         Map.add map ~key:c.Controller_report.controller_id ~data:c)
@@ -155,7 +155,7 @@ module Pixel_pusher_status = struct
       let y = display_height -. (40. +. ((Float.of_int index) *. box_height)) in
       let rect_color =
         match Map.find seen_controllers controller_id with
-        | None -> (1.0, 0.0, 0.0)    
+        | None -> (1.0, 0.0, 0.0)
         | Some c ->
           let span = Time.diff now c.Controller_report.last_beacon in
           if Time.Span.(<) span (sec 1.0) then (0.0, 1.0, 0.0)
@@ -167,9 +167,9 @@ module Pixel_pusher_status = struct
 end
 
 module Beat_status = struct
-    
+
 end
-  
+
 let send_frame_to_pixel_pushers a send_updates_t =
   match a.Animation.model with
     | None -> failwithf "animation %s is not initiatilized" a.Animation.name ()
@@ -232,11 +232,11 @@ let display ~model ~send_updates_t () =
     end;
     incr num_display_calls
   end
-    
+
 let tick () =
   (* We time the refreshes ourselves via this idle func rather than
      having GLUT do it because this pause call has the important
-     side-effect of surrendering time to the Async thread. 
+     side-effect of surrendering time to the Async thread.
      It also saves us from burning 100% CPU (if we don't have to). *)
   let span = Time.diff !next_display_time (Time.now ()) in
   if Time.Span.(>) span Time.Span.zero then
@@ -282,7 +282,7 @@ let gl_main model send_updates_t =
   let _ = Glut.createWindow ~title in
 
   Glut.setCursor Glut.CURSOR_LEFT_ARROW;
-  
+
   Glut.positionWindow ~x:0 ~y:0;
   GlMat.mode `projection;
   GlMat.load_identity ();
@@ -314,7 +314,7 @@ let do_ifconfig () =
     let cmd = "/usr/bin/sudo /sbin/ifconfig eth0 10.1.1.120 netmask 255.255.255.0" in
     let lst = String.split cmd ~on:' ' in
     List.hd_exn lst, List.tl_exn lst
-  in  
+  in
   Process.create ~prog ~args () >>| fun result ->
   printf "*** Setup interface: ";
   try

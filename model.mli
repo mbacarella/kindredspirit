@@ -1,5 +1,5 @@
-open Core.Std
-open Async.Std
+open Core
+open Async
 
 module Virtual_strip : sig
   type t =
@@ -17,7 +17,7 @@ type t =
     ; y_limits : float * float
     ; z_limits : float * float }
 [@@deriving sexp, fields]
-    
+
 val load : string -> t Deferred.t
 val dup : t -> t
 val dump_sexp : t -> unit

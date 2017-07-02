@@ -1,4 +1,4 @@
-open! Core.Std
+open! Core
 
 type t = { r: int; g: int; b: int } [@@deriving sexp, fields]
 let black = { r=0; g=0; b=0 }
@@ -22,7 +22,7 @@ let of_gl (r, g, b) =
   { r=i (r*.255.); g=i (g*.255.); b=i (b*.255.) }
 let to_string t =
   sexp_of_t t |> Sexp.to_string
-      
+
 let shade t ~factor =
   let r, g, b =
     let f = Float.of_int in

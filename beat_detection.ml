@@ -1,11 +1,11 @@
-open Core.Std
-open Async.Std
+open Core
+open Async
 
 type t = { beat_magnitude : float } [@@deriving sexp] ;;
 
 let beat = ref 0.
 let exe = "./beat_detection_helper.native"
-  
+
 let rec reader_loop reader =
   Reader.read_line reader >>= function
     | `Eof -> failwithf "%s exited unexpectedly" exe ()
@@ -13,7 +13,7 @@ let rec reader_loop reader =
       let t = Sexp.of_string line |> t_of_sexp in
       beat := t.beat_magnitude;
       reader_loop reader
-        
+
 let start () =
   Process.create ~prog:exe ~args:[] ()
   >>| fun result ->
@@ -58,7 +58,7 @@ let beat_updater_loop reader =
         loop ()
   in
   loop ()
-  
+
 let start () =
   Process.create ~prog:"arecord"
     ~args:["-f"; "S16_LE"; "-t"; "raw"; "-c1"; sprintf "-r%d" hz] ()
