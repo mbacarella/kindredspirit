@@ -46,13 +46,25 @@ module Spectrogram = struct
     done
 end
 
+let dump_available_devices () =
+  let num = Portaudio.get_device_count () in
+  List.iter (List.range 0 num) ~f:(fun i ->
+    let info = Portaudio.get_device_info i in
+    eprintf "%d: %s\n" i info.Portaudio.d_name)
+
 let setup () =
   Portaudio.init ();
   let pulse_device_no =
     let num_devices = Portaudio.get_device_count () in
-    List.find_exn (List.range 0 num_devices) ~f:(fun device_no ->
-      let device_info = Portaudio.get_device_info device_no in
-      device_info.Portaudio.d_name = "pulse")
+    try
+      List.find_exn (List.range 0 num_devices) ~f:(fun device_no ->
+        let device_info = Portaudio.get_device_info device_no in
+        device_info.Portaudio.d_name = "pulse")
+    with
+      | Not_found ->
+        eprintf "*** Couldn't find device.  List of available devices:\n%!";
+        dump_available_devices ();
+        exit 1
   in
   let stream =
     let instream =

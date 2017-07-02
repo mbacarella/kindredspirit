@@ -10,7 +10,7 @@ ocamlbuild \
     -pkg bitstring \
     -pkg fftw3 \
     -pkg portaudio \
-    -tag "ppx(~/.opam/4.04.0/lib/ppx_bitstring/ppx)" \
+    -tag "ppx(~/.opam/4.04.2/lib/ppx_bitstring/ppx_bitstring.ext)" \
     -tag "ppx(ppx-jane -as-ppx)" \
     -tag thread \
     -tag debug \

@@ -5,21 +5,27 @@ type t = { beat_magnitude : float } [@@deriving sexp] ;;
 
 let beat = ref 0.
 let exe = "./beat_detection_helper.native"
-
-let rec reader_loop reader =
+  
+let rec reader_loop ~reader ~err_reader =
   Reader.read_line reader >>= function
-    | `Eof -> failwithf "%s exited unexpectedly" exe ()
+    | `Eof ->
+      begin
+        Reader.contents err_reader >>= fun err_contents ->
+        eprintf "*** Beat detection helper closed stdout.  Contents of stderr:\n%s\n" err_contents;
+        return ()
+      end
     | `Ok line ->
       let t = Sexp.of_string line |> t_of_sexp in
       beat := t.beat_magnitude;
-      reader_loop reader
-
+      reader_loop ~reader ~err_reader
+        
 let start () =
   Process.create ~prog:exe ~args:[] ()
   >>| fun result ->
   let subprocess = Or_error.ok_exn result in
   let reader = Process.stdout subprocess in
-  don't_wait_for (reader_loop reader)
+  let err_reader = Process.stderr subprocess in
+  don't_wait_for (reader_loop ~reader ~err_reader)
 
 (*
 let beat_updater_loop reader =
