@@ -456,9 +456,7 @@ module Flame = struct
     incr ticks
 
   let animation =
-    { empty with name="flame"
-    ; primary_color = Some (Color.rand ())
-    ; update }
+    { empty with name="flame"; update }
 end
 
 module Pixelate = struct

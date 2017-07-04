@@ -107,7 +107,7 @@ let display t =
       let colors, vertices = color_picker_elements (t.x, t.y, t.width, t.height) in
       GlArray.color `three colors;
       GlArray.vertex `two vertices;
-      GlDraw.point_size 2.0;
+      GlDraw.point_size 1.0;
       GlArray.draw_arrays `points ~first:0 ~count:cells_total
   end;
   display_selections t
