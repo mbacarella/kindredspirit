@@ -5,6 +5,8 @@ Lighting control code for the art car Kindred Spirit.
 
 http://ourkindredspirit.org/
 
+Video of the lighting in action: https://www.youtube.com/watch?v=26bCym6FoNs
+
 Prerequisites
 -------------
 
