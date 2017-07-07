@@ -13,4 +13,5 @@ else
 fi
 
 echo "*** Now starting $EXE..."
-./build.sh && ./kindredspirit.native -sound-dev default -no-beat-detection
+./build.sh && ./kindredspirit.native -config thinkpad_sl410.sexp
+

@@ -116,7 +116,6 @@ module Rain_rnd = struct
     { empty with name = "rain-rnd"; update }
 end
 
-
 module Split = struct
   let update t =
     iter_pixels t ~f:(fun _ vp ->
@@ -180,14 +179,14 @@ module Waveform = struct
         pcm_data.(circ_index)
       in
       vp.Virtual_pixel.color <- f ~dist ~power)
-
+(*
   let update_intensity t =
     let sample_max = 32768.0 in
     let color = Option.value_exn t.primary_color in
     update t (fun ~dist:_ ~power ->
       let intensity = (Float.of_int power) /. sample_max in
       Color.shade ~factor:(1.0 -. intensity) color)
-
+*)
   let update_rgb t =
     update t (fun ~dist:_ ~power ->
       let color =
@@ -198,7 +197,7 @@ module Waveform = struct
         else Color.black
       in
       color)
-  let anim_intensity = { empty with name = "waveform"; update=update_intensity; primary_color = Some Color.purple }
+  (*  let anim_intensity = { empty with name = "waveform"; update=update_intensity; primary_color = Some Color.purple } *)
   let anim_rgb = { empty with name = "waveform-rgb"; update=update_rgb }
 end
 
@@ -286,27 +285,6 @@ module Rainbow_dj = struct
 
   let animation =
     { empty with name = "rainbow-dj"; update }
-end
-
-module Radiate_dj = struct
-  let ticks = ref 0
-
-  let update t =
-    let i = Float.of_int !ticks in
-    iter_pixels t ~f:(fun _ vp ->
-      let d = Coordinate.dist dj vp.Virtual_pixel.coord in
-      vp.Virtual_pixel.color <-
-	if d >= i && d < (i +. 40.) then Option.value_exn t.primary_color
-	else if d >= (i +. 40.) && d < (i +. 80.) then Option.value_exn t.secondary_color
-	else Color.black);
-    ticks := (succ !ticks) mod 200
-
-  let animation =
-    { empty with name="radiate-dj"
-    ; update
-    ; primary_color = Some Color.{r=0x99; g=0; b=0 }
-    ; secondary_color = Some Color.black
-    }
 end
 
 module Scan_dj = struct
@@ -491,11 +469,9 @@ let live_all =
   ; Scan_dj.rnd_animation
   ; Solid_glow.animation
   ; Solid_beat.animation
-  ; Waveform.anim_intensity
   ; Waveform.anim_rgb
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
-  ; Radiate_dj.animation
   ; Flame.animation
   ; Pixelate.animation ]
 
