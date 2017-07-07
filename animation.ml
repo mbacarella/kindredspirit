@@ -113,10 +113,7 @@ module Rain_rnd = struct
     if !ticks mod 200 = 0 then color := Color.rand ()
 
   let animation =
-    { empty with
-      name = "rain-rnd"
-    ; update
-    ; primary_color = Some (Color.of_hex_int 0x660E6F) }
+    { empty with name = "rain-rnd"; update }
 end
 
 
@@ -190,7 +187,7 @@ module Waveform = struct
     update t (fun ~dist:_ ~power ->
       let intensity = (Float.of_int power) /. sample_max in
       Color.shade ~factor:(1.0 -. intensity) color)
-      
+
   let update_rgb t =
     update t (fun ~dist:_ ~power ->
       let color =
@@ -200,11 +197,11 @@ module Waveform = struct
         else if power > 500 then Color.red
         else Color.black
       in
-      color) 
+      color)
   let anim_intensity = { empty with name = "waveform"; update=update_intensity; primary_color = Some Color.purple }
   let anim_rgb = { empty with name = "waveform-rgb"; update=update_rgb }
 end
-  
+
 (*
 module Subwoofer = struct
   let max_beat = ref 0.
@@ -229,7 +226,7 @@ module Subwoofer = struct
     ; primary_color = Some Color.green }
 end
 *)
-  
+
 module Strobe = struct
   let ticks = ref 0
   let color = ref Color.white
