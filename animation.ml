@@ -76,25 +76,28 @@ end
 module Rain = struct
   let ticks = ref 0
   let height = 140.
-  let update t =
+  let rand_color = ref (Color.rand ())
+  let update ~rnd t =
+    if rnd && !ticks mod 300 = 0 then rand_color := Color.rand ()
+    else ();
     let pos = Float.of_int ((!ticks/3) mod (Float.to_int (height *. 1.5))) in
     iter_pixels t ~f:(fun _ vp ->
-      vp.Virtual_pixel.color <- Option.value_exn
-	(let coord = vp.Virtual_pixel.coord in
-	 let dist = coord.Coordinate.y -. pos in
-	 if dist < 0. then Some (Color.shade ~factor:0.05 vp.Virtual_pixel.color)
-	 else if dist < 1. then t.primary_color
-	 else
-	   Option.map t.primary_color ~f:(Color.shade ~factor:((dist /. height) *. 10.))));
+      let color = if rnd then !rand_color else Option.value_exn t.primary_color in
+      vp.Virtual_pixel.color <-
+        begin
+	  let coord = vp.Virtual_pixel.coord in
+	  let dist = coord.Coordinate.y -. pos in
+	  if dist < 0. then Color.shade vp.Virtual_pixel.color ~factor:0.05 
+	  else if dist < 1. then color
+	  else Color.shade ~factor:((dist /. height) *. 10.) color
+        end);
     incr ticks
 
-  let animation =
-    { empty with
-      name = "rain"
-    ; update
-    ; primary_color = Some (Color.of_hex_int 0x660E6F) }
+  let anim = { empty with name = "rain"; update = update ~rnd:false; primary_color = Some (Color.of_hex_int 0x660E6F) }
+  let anim_rnd = { empty with name = "rain-rnd"; update = update ~rnd:true } 
 end
 
+      (*
 (* TODO: factor me *)
 module Rain_rnd = struct
   let ticks = ref 0
@@ -115,7 +118,8 @@ module Rain_rnd = struct
   let animation =
     { empty with name = "rain-rnd"; update }
 end
-
+      *)
+      
 module Split = struct
   let update t =
     iter_pixels t ~f:(fun _ vp ->
@@ -347,7 +351,7 @@ end
 
 module Flame = struct
   let ticks = ref 0
-  let init_color = ref (Color.rand ())
+  let rand_color = ref (Color.rand ())
 
   let update ~rnd t =
     let model = Option.value_exn t.model in
@@ -356,13 +360,10 @@ module Flame = struct
     let max_y = Model.max_y model in
     let row y = Map.find_exn y_map y in
 
-    if rnd then begin
-      if !ticks mod 10 = 0 then init_color := Color.rand ()
-      else ()
-    end
-    else init_color := Option.value_exn t.primary_color;
+    if rnd && !ticks mod 10 = 0 then rand_color := Color.rand ();
+    let color = if rnd then !rand_color else Option.value_exn t.primary_color in
 
-    Array.iter (row max_y) ~f:(fun vp -> vp.Virtual_pixel.color <- !init_color);
+    Array.iter (row max_y) ~f:(fun vp -> vp.Virtual_pixel.color <- color);
     List.iter (List.range 0 (Array.length y_range-1)) ~f:(fun i ->
       let y = y_range.(i) in
       let lower_y = y_range.(succ i) in
@@ -414,8 +415,8 @@ let live_all =
   ; Split.animation
   ; Strobe.reg
   ; Strobe.rnd
-  ; Rain.animation
-  ; Rain_rnd.animation
+  ; Rain.anim
+  ; Rain.anim_rnd
   ; Scan_dj.reg_animation
   ; Scan_dj.rnd_animation
   ; Solid_glow.animation
