@@ -345,71 +345,22 @@ module Slugs = struct
     ; update }
 end
 
-(*
-module Layers = struct
-  let ticks = ref 0
-  let colors = Array.init 5000 ~f:(fun i ->
-    match i mod 4 with
-      | 0 -> Color.red
-      | 1 -> Color.green
-      | 2 -> Color.blue
-      | 3 -> Color.purple
-      | _ -> assert false)
-  let update t =
-    iter_pixels t ~f:(fun _ vp ->
-      let index = vp.Virtual_pixel.coord.Coordinate.y |> Float.to_int in
-      vp.Virtual_pixel.color <- colors.((index + (!ticks/10)) mod Array.length colors));
-    incr ticks
-  let animation = { empty with name = "layers"; update }
-end
-*)
-
-(* let y_buckets = *)
-(*   (\* Bucket pixels along y axis *\) *)
-(*   Memo.general (fun t -> *)
-(*     let map = *)
-(*       with_model t ~f:(fun _t model -> *)
-(*         List.fold_left (Model.virtual_pixels model) ~init:Map.Poly.empty ~f:(fun map vp -> *)
-(*           let key = Virtual_pixel.coord vp |> Coordinate.y |> Float.to_int in *)
-(*           Map.add_multi map ~key ~data:vp)) *)
-(*     in *)
-(*     Map.to_alist map |> List.fold_left ~init:Map.Poly.empty ~f:(fun map (key, vps) -> *)
-(*       let data = *)
-(*         Array.of_list (List.sort vps ~cmp:(fun a b -> *)
-(*           Float.compare *)
-(*             (Virtual_pixel.coord a |> Coordinate.x) *)
-(*             (Virtual_pixel.coord b |> Coordinate.x))) *)
-(*       in *)
-(*       Map.add map ~key ~data)) *)
-
 module Flame = struct
   let ticks = ref 0
   let init_color = ref (Color.rand ())
 
-  let update t =
-    (* memo some of this *)
-    let map =
-      let map =
-        with_model t ~f:(fun _t model ->
-          List.fold_left (Model.virtual_pixels model) ~init:Map.Poly.empty ~f:(fun map vp ->
-            let key = Virtual_pixel.coord vp |> Coordinate.y |> Float.to_int in
-            Map.add_multi map ~key ~data:vp))
-      in
-      Map.to_alist map |> List.fold_left ~init:Map.Poly.empty ~f:(fun map (key, vps) ->
-        let data =
-          Array.of_list (List.sort vps ~cmp:(fun a b ->
-            Float.compare
-              (Virtual_pixel.coord a |> Coordinate.x)
-              (Virtual_pixel.coord b |> Coordinate.x)))
-        in
-        Map.add map ~key ~data)
-    in
-    let y_range = Map.keys map |> List.sort ~cmp:Int.compare |> Array.of_list in
-    let min_y, max_y = y_range.(0), y_range.(Array.length y_range-1) in
-    assert (min_y < (max_y+1));
-    let row y = Map.find_exn map y in
+  let update ~rnd t =
+    let model = Option.value_exn t.model in
+    let y_map = Model.y_map model in
+    let y_range = Model.y_range model in
+    let max_y = Model.max_y model in
+    let row y = Map.find_exn y_map y in
 
-    if !ticks mod 10 = 0 then init_color := Color.rand ();
+    if rnd then begin
+      if !ticks mod 10 = 0 then init_color := Color.rand ()
+      else ()
+    end
+    else init_color := Option.value_exn t.primary_color;
 
     Array.iter (row max_y) ~f:(fun vp -> vp.Virtual_pixel.color <- !init_color);
     List.iter (List.range 0 (Array.length y_range-1)) ~f:(fun i ->
@@ -430,8 +381,8 @@ module Flame = struct
         vp.Virtual_pixel.color <- color));
     incr ticks
 
-  let animation =
-    { empty with name="flame"; update }
+  let anim = { empty with name="flame"; update = update ~rnd:false; primary_color = Some Color.purple }
+  let anim_rnd = { empty with name="flame-rnd"; update = update ~rnd:true }
 end
 
 module Pixelate = struct
@@ -472,7 +423,8 @@ let live_all =
   ; Waveform.anim_rgb
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
-  ; Flame.animation
+  ; Flame.anim
+  ; Flame.anim_rnd
   ; Pixelate.animation ]
 
 let test_all () =
