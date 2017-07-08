@@ -313,7 +313,29 @@ let start_waveform_listener ~sound_dev =
   don't_wait_for (In_thread.run (fun () ->
     Waveform.start ~sound_dev))
 
+let start_watchdog_muter () =
+  let ip = "10.1.1.200" in
+  let watchdog_ip = Unix.Inet_addr.of_string ip in
+  let watchdog_port = 9901 in
+  let addr = Unix.ADDR_INET (watchdog_ip, watchdog_port) in
+  let socket =
+    Core.Unix.socket ~domain:Core.Unix.PF_INET
+      ~kind:Core.Unix.SOCK_DGRAM ~protocol:0
+  in
+  let buf = "STFU" in
+  let len = String.length buf in
+  Clock.every (sec 1.) (fun () ->
+    let bytes_sent =
+      Core.Unix.sendto socket ~buf ~pos:0
+        ~len:(String.length buf) ~mode:[] ~addr
+    in
+    if bytes_sent <> len then
+      failwithf "Failed to send %d bytes to %s (%d bytes short)"
+        bytes_sent ip (len - bytes_sent) ());
+  printf "*** Watchdog muter initialized\n"
+    
 let main ~config =
+  start_watchdog_muter ();
   let sound_dev = Config.sound_dev config in
   (if (Config.beat_detection config) then Beat_detection.start ~sound_dev
    else return ()) >>= fun () ->
