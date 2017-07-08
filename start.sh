@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# TODO: killall -STOP NetworkManager
+# TODO: killall -9 dhclient
+
 EXE="kindredspirit.native"
 MY_IP=10.1.1.120/24
 DEV=enp8s0
@@ -14,4 +17,3 @@ fi
 
 echo "*** Now starting $EXE..."
 ./build.sh && ./kindredspirit.native -config thinkpad_sl410.sexp
-
