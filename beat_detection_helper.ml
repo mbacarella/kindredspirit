@@ -49,6 +49,8 @@ end
 let main ~sound_dev =
   let bbuf = [| Array.create ~len:num_samples_per_tick 0 |] in
   let audio = Audio.init ~hz ~num_samples_per_read:num_samples_per_tick ~sound_dev in
+  let bands_lst = Array.to_list Spectrogram.bands in
+  let hist = Spectrogram.get_array () in
   let rec loop () =
     Audio.read audio bbuf;
     let dft =
@@ -67,14 +69,13 @@ let main ~sound_dev =
       output
     in
     Spectrogram.update dft;
-    let hist = Spectrogram.get_array () in
-    let power =
-      let a = Set.fold hist.(0) ~init:0. ~f:max in
-      let b = Set.fold hist.(1) ~init:0. ~f:max in
-      a +. b /. 2.0
+    let line =
+      List.mapi bands_lst ~f:(fun i band ->
+        let power = Set.fold hist.(i) ~init:0. ~f:Float.max in
+        sprintf "%d:%.2f" band power)
+      |> String.concat ~sep:","
     in
-    printf "%s\n%!"
-      ({ Beat_detection.beat_magnitude = power } |> Beat_detection.sexp_of_t |> Sexp.to_string);
+    print_endline line;
     loop ()
   in
   loop ()
