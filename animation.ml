@@ -121,11 +121,15 @@ end
       *)
       
 module Split = struct
+  let shades = Array.init 50 ~f:(fun i -> Float.of_int i /. 50.)
+  let ticks = ref 0
   let update t =
     iter_pixels t ~f:(fun _ vp ->
-      let d = Float.abs vp.Virtual_pixel.coord.Coordinate.z in
+      let d = 50 - (Float.abs vp.Virtual_pixel.coord.Coordinate.z |> Float.to_int) in
       let pcolor = Option.value_exn t.primary_color in
-      vp.Virtual_pixel.color <- Color.shade ~factor:(d /. 50.) pcolor)
+      let index = (d + !ticks) mod (Array.length shades) in
+      vp.Virtual_pixel.color <- Color.shade ~factor:(shades.(index)) pcolor);
+    incr ticks
   let animation = { empty with name = "split"; update; primary_color = Some Color.green }
 end
 
