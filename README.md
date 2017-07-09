@@ -5,8 +5,8 @@ Lighting control code for the art car Kindred Spirit.
 
 http://ourkindredspirit.org/
 
-Prerequisites
--------------
+Building
+---------
 
 You need an OCaml environment and the OPAM package manager.
 
