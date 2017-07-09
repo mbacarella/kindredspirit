@@ -11,7 +11,7 @@ let iter_pixels f =
 
 let iter_pixels_set_color f =
   iter_pixels (fun strip index ->
-    Pixel_pusher.Strip.set_pixel strip ~color:(f ()) ~index)
+    Pixel_pusher.Strip.set_pixel strip ~color:(f strip) ~index)
 
 let muted_until = ref Time.epoch
 
@@ -32,7 +32,9 @@ let watchdog () =
   Clock.every (sec 1.) (fun () ->
     if Time.(<) (Time.now ()) !muted_until then ()
     else begin
-      iter_pixels_set_color (fun () -> Color.green);
+      iter_pixels_set_color (fun strip ->
+        if  strip.Pixel_pusher.Strip.controller_id mod 2 = 0 then Color.green
+        else Color.purple);
       Pixel_pusher.send_updates uph
     end);
   Deferred.never ()
