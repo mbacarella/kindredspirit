@@ -97,29 +97,6 @@ module Rain = struct
   let anim_rnd = { empty with name = "rain-rnd"; update = update ~rnd:true } 
 end
 
-      (*
-(* TODO: factor me *)
-module Rain_rnd = struct
-  let ticks = ref 0
-  let height = 140.
-  let color = ref (Color.rand ())
-  let update t =
-    let pos = Float.of_int ((!ticks/2) mod (Float.to_int height)) in
-    iter_pixels t ~f:(fun _ vp ->
-      vp.Virtual_pixel.color <-
-	(let coord = vp.Virtual_pixel.coord in
-	 let dist = coord.Coordinate.y -. pos in
-         if dist > 0. && dist < 1. then !color
-	 else
-           Color.shade ~factor:((dist /. height) *. 10.) !color));
-    incr ticks;
-    if !ticks mod 200 = 0 then color := Color.rand ()
-
-  let animation =
-    { empty with name = "rain-rnd"; update }
-end
-      *)
-      
 module Split = struct
   let shades = Array.init 50 ~f:(fun i -> Float.of_int i /. 50.)
   let ticks = ref 0
