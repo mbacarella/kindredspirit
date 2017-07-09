@@ -318,8 +318,7 @@ let start_watchdog_muter () =
   let watchdog_ip = Unix.Inet_addr.of_string ip in
   let watchdog_port = 9901 in
   let addr = Unix.ADDR_INET (watchdog_ip, watchdog_port) in
-  let socket =
-    Core.Unix.socket ~domain:Core.Unix.PF_INET
+  let socket =    Core.Unix.socket ~domain:Core.Unix.PF_INET
       ~kind:Core.Unix.SOCK_DGRAM ~protocol:0
   in
   let buf = "STFU" in
