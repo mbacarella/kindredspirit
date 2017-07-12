@@ -16,4 +16,4 @@ else
 fi
 
 echo "*** Now starting $EXE..."
-./build.sh && ./kindredspirit.native -config configs/thinkpad_sl410.sexp
+./build.sh && ./kindredspirit.native configs/thinkpad_sl410.sexp

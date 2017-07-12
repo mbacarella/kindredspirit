@@ -351,10 +351,10 @@ let () =
     Command.async ~summary:title
       Command.Spec.(empty
                     +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power"
-                    +> flag "-config" (required string) ~doc:"<PATH> config file")
-      (fun test_animations config_file () ->
+                    +> anon ("config-path" %: string))
+      (fun test_animations config_path () ->
 	if test_animations then Animation.mode := `test;
-        Reader.file_contents config_file >>= fun s ->
+        Reader.file_contents config_path >>= fun s ->
         let config = Sexp.of_string s |> Config.t_of_sexp in
         main ~config)
   in
