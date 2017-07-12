@@ -15,7 +15,10 @@ type t =
     ; controller_ids : Int.Set.t
     ; x_limits : float * float
     ; y_limits : float * float
-    ; z_limits : float * float }
+    ; z_limits : float * float
+    ; y_map : (int, Virtual_pixel.t array) Core.Map.Poly.t
+    ; y_range : int array
+    ; max_y : int }
 [@@deriving sexp, fields]
 
 val load : string -> t Deferred.t

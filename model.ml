@@ -15,7 +15,11 @@ type t =
   ; controller_ids : Int.Set.t
   ; x_limits : float * float
   ; y_limits : float * float
-  ; z_limits : float * float }
+  ; z_limits : float * float
+    (* these are mostly for flame *)
+  ; y_map : (int, Virtual_pixel.t array) Map.Poly.t
+  ; y_range : int array
+  ; max_y : int }
 [@@deriving sexp, fields]
 
 let signum f =
@@ -136,6 +140,27 @@ let rasterize strips =
   printf "*** Converted %d strips to %d pixels\n" (List.length strips) (List.length pixels);
   pixels
 
+let gen_ymap virtual_pixels =
+  let map1 =
+    List.fold_left virtual_pixels ~init:Map.Poly.empty ~f:(fun map vp ->
+      let key = Virtual_pixel.coord vp |> Coordinate.y |> Float.to_int in
+      Map.add_multi map ~key ~data:vp)
+  in
+  let y_map =
+    Map.to_alist map1 |> List.fold_left ~init:Map.Poly.empty ~f:(fun map (key, vps) ->
+      let data =
+        Array.of_list (List.sort vps ~cmp:(fun a b ->
+          Float.compare
+            (Virtual_pixel.coord a |> Coordinate.x)
+            (Virtual_pixel.coord b |> Coordinate.x)))
+      in
+      Map.add map ~key ~data)
+  in
+  let y_range = Map.keys y_map |> List.sort ~cmp:Int.compare |> Array.of_list in
+  let min_y, max_y = y_range.(0), y_range.(Array.length y_range-1) in
+  assert (min_y < (max_y+1));
+  y_map, y_range, max_y
+
 let load path =
   Reader.file_lines path >>| fun lines ->
   let virtual_strips =
@@ -187,12 +212,14 @@ let load path =
   let x_limits = limits (Fn.compose Coordinate.x Virtual_pixel.coord) in
   let y_limits = limits (Fn.compose Coordinate.y Virtual_pixel.coord) in
   let z_limits = limits (Fn.compose Coordinate.z Virtual_pixel.coord) in
-  { virtual_strips; virtual_pixels; controller_ids; x_limits; y_limits; z_limits }
+  let y_map, y_range, max_y = gen_ymap virtual_pixels in
+  { virtual_strips; virtual_pixels; controller_ids; x_limits; y_limits; z_limits; y_map; y_range; max_y }
 
 let dup t =
-  { t with
-    virtual_pixels = (* force a deep copy *)
-      List.map t.virtual_pixels ~f:(fun vp -> { vp with Virtual_pixel.color = vp.Virtual_pixel.color }) }
+  (* force a deep copy *)
+  let virtual_pixels = List.map t.virtual_pixels ~f:(fun vp -> { vp with Virtual_pixel.color = vp.Virtual_pixel.color }) in
+  let y_map, y_range, max_y = gen_ymap virtual_pixels in
+  { t with virtual_pixels; y_map; y_range; max_y }
 
 let dump_sexp t =
   print_endline (sexp_of_t t |> Sexp.to_string_hum)

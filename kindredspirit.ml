@@ -3,18 +3,19 @@ open! Async
 
 let title = "Kindred Spirit Lighting Console"
 
-(*
-(* Thinkpad T420 *)
-let display_width = 1600.0
-let display_height = 880.0
-*)
-  
-(* Thinkpad SL410 *)
-let display_width = 1366.0
-let display_height = 758.0
-  
-let target_fps = 50.
-let display_interval = sec (1. /. target_fps)
+module Config = struct
+  type t =
+      { display_width : float
+      ; display_height : float
+      ; target_fps : float
+      ; beat_detection : bool
+      ; waveform_detection : bool
+      ; sound_dev : string }
+        [@@deriving sexp, fields]
+  let display_interval t =
+    sec (1. /. t.target_fps)
+end
+
 let num_display_calls = ref 0
 let last_display_time = ref Time.epoch
 
@@ -53,7 +54,8 @@ module List_pane = struct
     List.findi (Animation.all ()) ~f:(fun i _a ->
       let y = height *. (Float.of_int i) in
       !mouse_x >= x && !mouse_x < width && !mouse_y >= y && !mouse_y < y +. height)
-  let display () =
+  let display config =
+    let display_height = Config.display_height config in
     GlDraw.color (0.1, 0.1, 0.1);
     GlDraw.rect (0., 0.) (width, display_height);
     let x = 0. in
@@ -105,9 +107,10 @@ let load_colors_from_picker a cp =
     | Some _, None | None, Some _ -> failwithf "broken secondary color picker for '%s'" a.Animation.name ()
   end
 
-let display_animation ~x a tag color_picker =
+let display_animation ~config ~x a tag color_picker =
   load_colors_from_picker a color_picker;
   let s = sprintf "%s: %s" tag a.Animation.name in
+  let display_height = Config.display_height config in
   text ~size:`md ~x ~y:(display_height -. 10.) s;
   a.Animation.update a;
   display_model ~center:(x +. 350., display_height -. 350.) (Option.value_exn a.Animation.model);
@@ -116,32 +119,36 @@ let display_animation ~x a tag color_picker =
 module Preview_pane = struct
   let x = List_pane.width
   let y = 0.
-  let width = (display_width -. x) /. 2.0 -. 5.
+  let width config = ((Config.display_width config) -. x) /. 2.0 -. 5.
   let loaded_animation = ref Animation.off
-  let color_picker = Color_picker.create ~x ~y ~width ~height:180.
-  let load_animation a model =
-    Color_picker.reset color_picker a;
+  let color_picker =
+    Memo.general (fun config -> Color_picker.create ~x ~y ~width:(width config) ~height:180.)
+  let load_animation config a model =
+    Color_picker.reset (color_picker config) a;
     loaded_animation := Animation.init a model
-  let display () =
-    display_animation ~x !loaded_animation "preview" color_picker;
+  let display config =
+    display_animation ~config ~x !loaded_animation "preview" (color_picker config);
 end
 
 module Live_pane = struct
-  let x = List_pane.width +. Preview_pane.width +. 10.
+  let x config = List_pane.width +. (Preview_pane.width config) +. 10.
   let y = 0.
-  let width = display_width -. x
+  let width config = (Config.display_width config) -. (x config)
   let loaded_animation = ref Animation.off
-  let color_picker = Color_picker.create ~x ~y ~width ~height:180.
-  let load_animation_from_preview () =
+  let color_picker =
+    Memo.general (fun config -> Color_picker.create ~x:(x config) ~y ~width:(width config) ~height:180.)
+  let load_animation_from_preview config =
     let a = !Preview_pane.loaded_animation in
-    Color_picker.reset color_picker a;
+    Color_picker.reset (color_picker config) a;
     loaded_animation := Animation.init a (Option.value_exn a.Animation.model)
-  let display () =
-    display_animation ~x !loaded_animation "live" color_picker;
+  let display config =
+    display_animation ~config ~x:(x config) !loaded_animation "live" (color_picker config);
 end
 
 module Pixel_pusher_status = struct
-  let display model =
+  let display config model =
+    let display_height = Config.display_height config in
+    let display_width = Config.display_width config in
     let module Controller_report = Pixel_pusher.Controller_report in
     let expected_controllers = model.Model.controller_ids in
     let seen_controllers =
@@ -167,10 +174,6 @@ module Pixel_pusher_status = struct
       text ~color:(0.0, 0.0, 0.0) ~x ~y (sprintf " %d" controller_id))
 end
 
-module Beat_status = struct
-
-end
-
 let send_frame_to_pixel_pushers a send_updates_t =
   match a.Animation.model with
     | None -> failwithf "animation %s is not initiatilized" a.Animation.name ()
@@ -188,37 +191,40 @@ let send_frame_to_pixel_pushers a send_updates_t =
 	    Pixel_pusher.Strip.set_pixel strip ~color ~index);
       Pixel_pusher.send_updates_from_non_async_thread send_updates_t
 
-let handle_mouse_events model =
+let handle_mouse_events config model =
   if !mouse_down_left then begin
     let x = !mouse_x in
-    let y = display_height -. !mouse_y in
-    Color_picker.maybe_set_primary Preview_pane.color_picker ~x ~y;
-    Color_picker.maybe_set_primary Live_pane.color_picker ~x ~y;
+    let y = (Config.display_height config) -. !mouse_y in
+    Color_picker.maybe_set_primary (Preview_pane.color_picker config) ~x ~y;
+    Color_picker.maybe_set_primary (Live_pane.color_picker config) ~x ~y;
     Option.iter (List_pane.mouse_over_animation ()) ~f:(fun (_, a) ->
-      Preview_pane.load_animation a model)
+      Preview_pane.load_animation config a model)
   end;
   if !mouse_down_right then begin
     let x = !mouse_x in
-    let y = display_height -. !mouse_y in
-    Color_picker.maybe_set_secondary Preview_pane.color_picker ~x ~y;
-    Color_picker.maybe_set_secondary Live_pane.color_picker ~x ~y
+    let y = (Config.display_height config) -. !mouse_y in
+    Color_picker.maybe_set_secondary (Preview_pane.color_picker config) ~x ~y;
+    Color_picker.maybe_set_secondary (Live_pane.color_picker config) ~x ~y
   end
 
 let next_display_time = ref (Time.now ())
-let display ~model ~send_updates_t () =
+let display ~config ~model ~send_updates_t () =
   if Time.( < ) (Time.now ()) !next_display_time then ()
   else begin
     let start_display_time = Time.now () in
+    let display_interval = Config.display_interval config in
     next_display_time := Time.add start_display_time display_interval;
-    handle_mouse_events model;
+    handle_mouse_events config model;
     GlClear.clear [`color];
-    List_pane.display ();
-    Preview_pane.display ();
-    Live_pane.display ();
-    Pixel_pusher_status.display model;
+    List_pane.display config;
+    Preview_pane.display config;
+    Live_pane.display config;
+    Pixel_pusher_status.display config model;
     let now = Time.now () in
     let fps = 1.0 /. Time.Span.to_sec (Time.diff now !last_display_time) in
     last_display_time := now;
+    let display_width = Config.display_width config in
+    let display_height = Config.display_height config in
     text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" fps);
     text ~x:(display_width -. 40.) ~y:(display_height -. 20.) (sprintf "beat: %.4f" !Beat_detection.beat);
     Gl.flush ();
@@ -244,10 +250,10 @@ let tick () =
     Time.pause span;
   Glut.postRedisplay ()
 
-let key_input model ~key ~x:_ ~y:_ =
+let key_input config model ~key ~x:_ ~y:_ =
   match Char.of_int key with
     | None -> printf "wat (key code: %d)\n" key
-    | Some '\r' -> Live_pane.load_animation_from_preview ()
+    | Some '\r' -> Live_pane.load_animation_from_preview config
     | Some '\n' -> printf "received line feed?!\n"
     | Some ' ' -> rotating := not !rotating
     | Some 'D' -> Model.dump_sexp model
@@ -277,7 +283,9 @@ let mouse_click_event ~button ~state ~x ~y =
       end
     | _ -> ()
 
-let gl_main model send_updates_t =
+let gl_main config model send_updates_t =
+  let display_width = Config.display_width config in
+  let display_height = Config.display_height config in
   let _ = Glut.init ~argv:Sys.argv in
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
   let _ = Glut.createWindow ~title in
@@ -294,9 +302,9 @@ let gl_main model send_updates_t =
   Color_picker.gl_init ();
 
   Glut.reshapeFunc ~cb:reshape;
-  Glut.displayFunc ~cb:(display ~model ~send_updates_t);
+  Glut.displayFunc ~cb:(display ~config ~model ~send_updates_t);
   Glut.idleFunc ~cb:(Some tick);
-  Glut.keyboardFunc ~cb:(key_input model);
+  Glut.keyboardFunc ~cb:(key_input config model);
   Glut.mouseFunc ~cb:mouse_click_event;
   Glut.motionFunc ~cb:mouse_motion;
   Glut.passiveMotionFunc ~cb:mouse_motion;
@@ -305,26 +313,49 @@ let gl_main model send_updates_t =
 let start_waveform_listener ~sound_dev =
   don't_wait_for (In_thread.run (fun () ->
     Waveform.start ~sound_dev))
-  
-let main ~no_beat_detection ~sound_dev =
-  (if not no_beat_detection then Beat_detection.start ~sound_dev
+
+let start_watchdog_muter () =
+  let ip = "10.1.1.200" in
+  let watchdog_ip = Unix.Inet_addr.of_string ip in
+  let watchdog_port = 9901 in
+  let addr = Unix.ADDR_INET (watchdog_ip, watchdog_port) in
+  let socket =    Core.Unix.socket ~domain:Core.Unix.PF_INET
+      ~kind:Core.Unix.SOCK_DGRAM ~protocol:0
+  in
+  let buf = "STFU" in
+  let len = String.length buf in
+  Clock.every (sec 1.) (fun () ->
+    let bytes_sent =
+      Core.Unix.sendto socket ~buf ~pos:0
+        ~len:(String.length buf) ~mode:[] ~addr
+    in
+    if bytes_sent <> len then
+      failwithf "Failed to send %d bytes to %s (%d bytes short)"
+        bytes_sent ip (len - bytes_sent) ());
+  printf "*** Watchdog muter initialized\n"
+    
+let main ~config =
+  start_watchdog_muter ();
+  let sound_dev = Config.sound_dev config in
+  (if (Config.beat_detection config) then Beat_detection.start ~sound_dev
    else return ()) >>= fun () ->
-  start_waveform_listener ~sound_dev;
+  if (Config.waveform_detection config) then start_waveform_listener ~sound_dev;
   Pixel_pusher.start () >>= fun send_updates_t ->
   Model.load "model.csv" >>= fun model ->
   Preview_pane.loaded_animation := (Animation.init Animation.off model);
   Live_pane.loaded_animation := (Animation.init Animation.off model);
-  In_thread.run (fun () -> gl_main model send_updates_t)
-    
+  In_thread.run (fun () -> gl_main config model send_updates_t)
+
 let () =
   let cmd =
     Command.async ~summary:title
       Command.Spec.(empty
                     +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power"
-                    +> flag "-no-beat-detection" no_arg ~doc:"disable beat detection"
-                    +> flag "-sound-dev" (optional_with_default "default" string) ~doc:"<device> specify sound device")
-      (fun test_animations no_beat_detection sound_dev () ->
+                    +> anon ("config-path" %: string))
+      (fun test_animations config_path () ->
 	if test_animations then Animation.mode := `test;
-        main ~no_beat_detection ~sound_dev)
+        Reader.file_contents config_path >>= fun s ->
+        let config = Sexp.of_string s |> Config.t_of_sexp in
+        main ~config)
   in
   Command.run cmd
