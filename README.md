@@ -27,3 +27,8 @@ Follow the instructions (printed at the end of the opam install process) for how
 Once the dependencies are installed try the above opam install line again.
 
 Now you can try ./build.sh
+
+Compatibility
+-------------
+
+Successfully builds and runs on Linux x86_64 OCaml 4.04.2, Ubuntu and Debian.  
