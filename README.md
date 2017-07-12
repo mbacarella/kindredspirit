@@ -18,7 +18,7 @@ Then do
 
 You can try other versions of OCaml but I've only tested it with 4.04.2.  Once that finishes try:
 
-`opam install async_extended ppx_bitstring patdiff merlin fftw3 lablgl portaudio`
+`opam install async_extended ppx_bitstring fftw3 lablgl portaudio`
 
 Likely, the above will mostly complete with a few errors regarding missing system packages.
 
