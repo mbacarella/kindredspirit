@@ -9,6 +9,7 @@ module Config = struct
       ; display_height : float
       ; target_fps : float
       ; beat_detection : bool
+      ; waveform_detection : bool
       ; sound_dev : string }
         [@@deriving sexp, fields]
   let display_interval t =
@@ -338,7 +339,7 @@ let main ~config =
   let sound_dev = Config.sound_dev config in
   (if (Config.beat_detection config) then Beat_detection.start ~sound_dev
    else return ()) >>= fun () ->
-  start_waveform_listener ~sound_dev;
+  if (Config.waveform_detection config) then start_waveform_listener ~sound_dev;
   Pixel_pusher.start () >>= fun send_updates_t ->
   Model.load "model.csv" >>= fun model ->
   Preview_pane.loaded_animation := (Animation.init Animation.off model);
