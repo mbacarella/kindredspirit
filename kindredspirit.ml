@@ -73,6 +73,33 @@ module List_pane = struct
 	  text ())
 end
 
+module Fps = struct
+  let times = Array.init 1000 ~f:(fun _ -> Time.epoch)
+  let index = ref 0
+  let fps = ref 0
+  let epsilon = Time.Span.of_ms 0.
+  let max_delay = ref epsilon
+  let add now =
+    times.(!index) <- now;
+    index := (succ !index) mod Array.length times
+  let calc () =
+    let cutoff = Time.sub (Time.now ()) (sec 1.) in
+    let times = Array.to_list times |> List.filter ~f:(Time.(<) cutoff) |> List.sort ~cmp:Time.compare in
+    max_delay :=
+      begin match times with
+      | [] | [_] -> epsilon
+      | t1 :: lst ->
+        let _, span =
+          List.fold_left lst ~init:(t1, epsilon) ~f:(fun (prev, span) time ->
+            let span' = Time.diff time prev in
+            if Time.Span.(>) span' span then (time, span')
+            else (time, span))
+        in
+        span
+      end;
+    fps := List.length times
+end
+
 let rotating = ref true
 
 let display_model =
@@ -221,11 +248,11 @@ let display ~config ~model ~send_updates_t () =
     Live_pane.display config;
     Pixel_pusher_status.display config model;
     let now = Time.now () in
-    let fps = 1.0 /. Time.Span.to_sec (Time.diff now !last_display_time) in
+    Fps.add now;
     last_display_time := now;
     let display_width = Config.display_width config in
     let display_height = Config.display_height config in
-    text ~x:(display_width -. 40.) ~y:(display_height -. 10.) (sprintf "fps: %.0f" fps);
+    text ~x:(display_width -. 90.) ~y:(display_height -. 10.) (sprintf "fps: %d max: %.0fms" !Fps.fps (Time.Span.to_ms !Fps.max_delay));
     text ~x:(display_width -. 40.) ~y:(display_height -. 20.) (sprintf "beat: %.4f" !Beat_detection.beat);
     Gl.flush ();
     Glut.swapBuffers ();
@@ -336,6 +363,7 @@ let start_watchdog_muter () =
     
 let main ~config =
   start_watchdog_muter ();
+  Clock.every (sec 1.) (fun () -> Fps.calc ());
   let sound_dev = Config.sound_dev config in
   (if (Config.beat_detection config) then Beat_detection.start ~sound_dev
    else return ()) >>= fun () ->
