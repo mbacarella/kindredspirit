@@ -92,8 +92,7 @@ module Fps = struct
         let _, span =
           List.fold_left lst ~init:(t1, epsilon) ~f:(fun (prev, span) time ->
             let span' = Time.diff time prev in
-            if Time.Span.(>) span' span then (time, span')
-            else (time, span))
+            (time, Time.Span.max span' span))
         in
         span
       end;
