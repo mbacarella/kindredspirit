@@ -203,23 +203,9 @@ module Waveform = struct
       let color =
         (*let bands = [| 60; 320; 640; 1280; 2560; 5120; 10240; 22000 |] *)
         let spectro = spectro () in
-        let lows =
-          assert (fst spectro.(0) = 60);
-          assert (fst spectro.(1) = 320);
-          avg_of_indices spectro [0; 1]
-        in
-        let mids =
-          assert (fst spectro.(2) = 640);
-          assert (fst spectro.(3) = 1280);
-          assert (fst spectro.(4) = 2560);
-          avg_of_indices spectro [2; 3; 4]
-        in
-        let highs =
-          assert (fst spectro.(5) = 5120);
-          assert (fst spectro.(6) = 10240);
-          assert (fst spectro.(7) = 22000);
-          avg_of_indices spectro [5; 6; 7]
-        in
+        let lows = avg_of_indices spectro [0; 1] in
+        let mids = avg_of_indices spectro [2; 3; 4] in
+        let highs = avg_of_indices spectro [5; 6; 7] in
         { Color.r = Float.to_int (lows  *. 255.)
         ;       g = Float.to_int (mids  *. 255.)
         ;       b = Float.to_int (highs *. 255.) }
