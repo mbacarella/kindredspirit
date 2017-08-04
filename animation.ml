@@ -152,29 +152,35 @@ module Waveform = struct
   let update t f =
     let pcm_data = Waveform.pcm_data in
     let pcm_data_len = Array.length pcm_data in
-    let index = !Waveform.index in
+    let pcm_index = !Waveform.index in
+    let spectro_data = Beat_detection.spectro in
+    let spectro_data_len = Array.length spectro_data in
+    let spectro_index = !Beat_detection.index in
     iter_pixels t ~f:(fun _ vp ->
-      let dist = min ((Coordinate.dist dj vp.Virtual_pixel.coord |> Float.to_int) / 3 ) pcm_data_len in
-      let power =
+      let power_dist = min ((Coordinate.dist dj vp.Virtual_pixel.coord |> Float.to_int) / 3 ) pcm_data_len in
+      let power () =
         let circ_index =
-          if dist > index
-          then pcm_data_len - (dist-index)
-          else index - dist
+          if power_dist > pcm_index
+          then pcm_data_len - (power_dist-pcm_index)
+          else pcm_index - power_dist
         in
         pcm_data.(circ_index)
       in
-      vp.Virtual_pixel.color <- f ~dist ~power)
-(*
-  let update_intensity t =
-    let sample_max = 32768.0 in
-    let color = Option.value_exn t.primary_color in
-    update t (fun ~dist:_ ~power ->
-      let intensity = (Float.of_int power) /. sample_max in
-      Color.shade ~factor:(1.0 -. intensity) color)
-*)
+      let spectro_dist = min ((Coordinate.dist dj vp.Virtual_pixel.coord |> Float.to_int) / 3 ) spectro_data_len in
+      let spectro () =
+        let circ_index =
+          if spectro_dist > spectro_index
+          then spectro_data_len - (spectro_dist-spectro_index)
+          else spectro_index - spectro_dist
+        in
+        spectro_data.(circ_index)
+      in
+      vp.Virtual_pixel.color <- f ~power ~spectro)
+
   let update_rgb t =
-    update t (fun ~dist:_ ~power ->
+    update t (fun ~power ~spectro:_ ->
       let color =
+        let power = power () in
         if power > 5000 then Color.blue
         else if power > 2500 then Color.purple
         else if power > 1000 then Color.green
@@ -182,10 +188,48 @@ module Waveform = struct
         else Color.black
       in
       color)
-  (*  let anim_intensity = { empty with name = "waveform"; update=update_intensity; primary_color = Some Color.purple } *)
+      
+  let avg_of_indices a ii =
+    (List.map ii ~f:(fun i -> snd a.(i)) |> List.fold_left ~init:0. ~f:(+.))
+    /. (List.length ii |> Float.of_int)
+      
+  let update_eq t =
+    update t (fun ~power ~spectro ->
+      let shade =
+        let power = Float.min 32768. (Float.of_int (power ())) in
+        assert (power >= 0.);
+        Color.shade ~factor:(1. -. (power /. 32768.))
+      in
+      let color =
+        (*let bands = [| 60; 320; 640; 1280; 2560; 5120; 10240; 22000 |] *)
+        let spectro = spectro () in
+        let lows =
+          assert (fst spectro.(0) = 60);
+          assert (fst spectro.(1) = 320);
+          avg_of_indices spectro [0; 1]
+        in
+        let mids =
+          assert (fst spectro.(2) = 640);
+          assert (fst spectro.(3) = 1280);
+          assert (fst spectro.(4) = 2560);
+          avg_of_indices spectro [2; 3; 4]
+        in
+        let highs =
+          assert (fst spectro.(5) = 5120);
+          assert (fst spectro.(6) = 10240);
+          assert (fst spectro.(7) = 22000);
+          avg_of_indices spectro [5; 6; 7]
+        in
+        { Color.r = Float.to_int (lows  *. 255.)
+        ;       g = Float.to_int (mids  *. 255.)
+        ;       b = Float.to_int (highs *. 255.) }
+      in
+      shade color)
+      
   let anim_rgb = { empty with name = "waveform-rgb"; update=update_rgb }
+  let anim_eq = { empty with name = "waveform-eq"; update=update_eq }
 end
-
+  
 (*
 module Subwoofer = struct
   let max_beat = ref 0.
@@ -403,6 +447,7 @@ let live_all =
   ; Solid_glow.animation
   ; Solid_beat.animation
   ; Waveform.anim_rgb
+  ; Waveform.anim_eq
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
   ; Flame.anim

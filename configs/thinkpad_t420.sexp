@@ -3,5 +3,5 @@
  (display_height 880.)
  (target_fps 50.)
  (beat_detection true)
- (waveform_detection false)
+ (waveform_detection true)
  (sound_dev default))
