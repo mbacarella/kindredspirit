@@ -4,4 +4,4 @@
  (target_fps 30.)
  (sound_dev default)
  (waveform_detection true)
- (beat_detection false))
+ (beat_detection true))
