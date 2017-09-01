@@ -1,9 +1,3 @@
-(* TODO: solidglow random *)
-(* TODO: speed up strobe *)
-(* TODO: speed up rain *)
-(* TODO: slugs need to be longer *)
-(* TODO: get rid of sticks *)
-
 open! Core
 
 type t =
@@ -15,7 +9,8 @@ type t =
 
 let dj = { Coordinate.x=140.; y=30.; z=(-40.) }
 (*let subs = { Coordinate.x=140.; y=150.; z=(-40.) }*)
-
+let nose = { Coordinate.x=45.; y=130.; z=0. }
+  
 let init t model =
   { t with model = Some (Model.dup model) }
 
@@ -52,7 +47,7 @@ let twinkle_animation =
         if Random.int 10 = 0 then Color.rand ()
         else Color.black
       end) }
-
+(*
 module Sticks_rnd = struct
   let ticks = ref 0
   let gen () =
@@ -78,7 +73,8 @@ module Sticks_rnd = struct
       name = "sticks-rnd"
     ; update }
 end
-
+*)
+    
 module Rain = struct
   let ticks = ref 0
   let height = 140.
@@ -86,7 +82,7 @@ module Rain = struct
   let update ~rnd t =
     if rnd && !ticks mod 300 = 0 then rand_color := Color.rand ()
     else ();
-    let pos = Float.of_int ((!ticks/3) mod (Float.to_int (height *. 1.5))) in
+    let pos = Float.of_int (!ticks mod (Float.to_int (height *. 1.5))) in
     iter_pixels t ~f:(fun _ vp ->
       let color = if rnd then !rand_color else Option.value_exn t.primary_color in
       vp.Virtual_pixel.color <-
@@ -118,25 +114,33 @@ end
 
 module Solid_glow = struct
   let ticks = ref 0
-  let update t =
+  let color = ref (Color.rand ())
+  let update ~rnd t =
     let phase =
       let phase = Float.of_int (!ticks mod 200) in
       if phase > 100. then 100. -. (phase -. 100.)
       else phase
     in
+    if rnd then begin
+      if !ticks mod 200 = 0 then
+        color := Color.rand ()
+    end else begin
+      color := Option.value_exn t.primary_color
+    end;
     (* TODO: drops out too fast near the end *)
     iter_pixels t ~f:(fun _ vp ->
-      let c =
-	Option.value_exn t.primary_color
-        |> Color.shade ~factor:(1.0 -. (phase /. 100.))
-      in
+      let c = Color.shade !color ~factor:(1.0 -. (phase /. 100.)) in
       vp.Virtual_pixel.color <- c);
     incr ticks
-  let animation =
+  let anim =
     { empty with
       name = "solidglow"
-    ; update
+    ; update=update ~rnd:false
     ; primary_color = Some Color.green }
+  let anim_rnd =
+    { empty with
+      name = "solidglow-rnd"
+    ; update=update ~rnd:true }
 end
 
 module Solid_beat = struct
@@ -269,9 +273,9 @@ module Strobe = struct
       color := if rnd then Color.rand () else Option.value_exn t.primary_color;
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <-
-        if !ticks < 50 then !color
+        if !ticks < 24 then !color
         else Color.black);
-    ticks := (succ !ticks) mod 100
+    ticks := (succ !ticks) mod 50
   let reg = { empty with name = "strobe"; update = update ~rnd:false; primary_color = Some Color.purple }
   let rnd = { empty with name = "strobe-rnd"; update = update ~rnd:true }
 end
@@ -322,6 +326,22 @@ module Rainbow_dj = struct
     { empty with name = "rainbow-dj"; update }
 end
 
+module Rainbow_nose = struct
+  let i = ref 0
+  let update t =
+    let cols = rainbow_colors () in
+    let colsl = Array.length cols in
+    iter_pixels t ~f:(fun _ vp ->
+      let d = Coordinate.dist nose (Virtual_pixel.coord vp) |> Float.to_int in
+      let index = (!i*2 + d*3) mod colsl in
+      vp.Virtual_pixel.color <- cols.(index)
+    );
+    incr i
+
+  let animation =
+    { empty with name = "rainbow-nose"; update }
+end
+
 module Scan_dj = struct
   let ticks = ref 0
   let color = ref (Color.rand ())
@@ -366,18 +386,25 @@ end
 
 module Slugs = struct
   let ticks = ref 0
-  let update t =
+  let color = ref (Color.rand ())
+  let update ~rnd t =
     let id = !ticks / 10 in
+    if rnd then begin
+      if !ticks = 0 then color := Color.rand ()
+    end else begin
+      color := Option.value_exn t.primary_color
+    end;
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <-
-        if vp.Virtual_pixel.pixel_id = id then Option.value_exn t.primary_color
-        else Color.shade ~factor:0.05 vp.Virtual_pixel.color);
+        if vp.Virtual_pixel.pixel_id = id then !color
+        else Color.shade ~factor:0.025 vp.Virtual_pixel.color);
     ticks := (succ !ticks) mod 1000
+    
 
-  let animation =
-    { empty with name="slugs"
-    ; primary_color = Some Color.green
-    ; update }
+  let anim =
+    { empty with name="slugs"; primary_color = Some Color.green; update=update ~rnd:false }
+  let anim_rnd =
+    { empty with name="slugs-rnd"; update=update ~rnd:true }
 end
 
 module Flame = struct
@@ -439,10 +466,9 @@ let live_all =
   ; solid_animation
   ; twinkle_animation
   ; noise_animation
-  (* ; Sticks_rnd.animation *)
   ; Strip_walk.animation
-  ; Slugs.animation
-  (* ; Layers.animation *)
+  ; Slugs.anim
+  ; Slugs.anim_rnd
   ; Split.animation
   ; Strobe.reg
   ; Strobe.rnd
@@ -450,12 +476,14 @@ let live_all =
   ; Rain.anim_rnd
   ; Scan_dj.reg_animation
   ; Scan_dj.rnd_animation
-  ; Solid_glow.animation
+  ; Solid_glow.anim
+  ; Solid_glow.anim_rnd
   ; Solid_beat.animation
   ; Waveform.anim_rgb
   ; Waveform.anim_eq
   ; Rainbow_solid.animation
   ; Rainbow_dj.animation
+  ; Rainbow_nose.animation
   ; Flame.anim
   ; Flame.anim_rnd
   ; Pixelate.animation ]
