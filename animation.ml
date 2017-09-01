@@ -439,7 +439,7 @@ let live_all =
   ; solid_animation
   ; twinkle_animation
   ; noise_animation
-  ; Sticks_rnd.animation
+  (* ; Sticks_rnd.animation *)
   ; Strip_walk.animation
   ; Slugs.animation
   (* ; Layers.animation *)
