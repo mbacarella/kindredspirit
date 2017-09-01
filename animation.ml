@@ -1,3 +1,9 @@
+(* TODO: solidglow random *)
+(* TODO: speed up strobe *)
+(* TODO: speed up rain *)
+(* TODO: slugs need to be longer *)
+(* TODO: get rid of sticks *)
+
 open! Core
 
 type t =
