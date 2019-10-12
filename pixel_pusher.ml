@@ -168,7 +168,7 @@ module Pusher_state = struct
 	let controller_id = strip.Strip.controller_id in
 	let strip_id = strip.Strip.strip_number in
 	let key = (controller_id, strip_id) in
-	Map.add map ~key ~data:strip)
+	Map.set map ~key ~data:strip)
     in
     strips := strips';
     strips_map := strips_map'
@@ -235,28 +235,42 @@ let send_pixels_to_pushers () =
 	+ 1*num_strips (* 8-bit strip indices *)
 	+ 3*num_strips*pixels_per_strip (* 24 bit rgb data *)
       in
-      let buf = String.create packet_size in
+      let buf = Bytes.create packet_size in
       let seq = pusher.Pusher_state.seq + seq_index in
       let char = Char.of_int_exn in
+      let set b i c = Bytes.set b i c in
+      (*
       buf.[0] <- char ((seq lsr 24) land 0xFF);
       buf.[1] <- char ((seq lsr 16) land 0xFF);
       buf.[2] <- char ((seq lsr  8) land 0xFF);
       buf.[3] <- char (seq land 0xFF);
+      *)
+      set buf 0 (char ((seq lsr 24) land 0xFF));
+      set buf 1 (char ((seq lsr 16) land 0xFF));
+      set buf 2 (char ((seq lsr  8) land 0xFF));
+      set buf 3 (char (seq land 0xFF));
+
       List.iteri strips ~f:(fun strip_index strip_num ->
 	let strip_base = 4 + strip_index*(1+pixels_per_strip*3) in
-	buf.[strip_base] <- char strip_num;
+        set buf strip_base (char strip_num);
+	(*buf.[strip_base] <- char strip_num;*)
 	let pixels_base = strip_base+1 in
 	for pixel_num=0 to pixels_per_strip-1; do
 	  let pixel = matrix.(strip_num*pixels_per_strip + pixel_num) in
+          set buf (pixels_base + pixel_num*3    ) (char (Color.r pixel));
+	  set buf (pixels_base + pixel_num*3 + 1) (char (Color.g pixel));
+	  set buf (pixels_base + pixel_num*3 + 2) (char (Color.b pixel))
+          (*
 	  buf.[pixels_base + pixel_num*3    ] <- char (Color.r pixel);
 	  buf.[pixels_base + pixel_num*3 + 1] <- char (Color.g pixel);
 	  buf.[pixels_base + pixel_num*3 + 2] <- char (Color.b pixel)
+          *)
 	done);
       send_now_or_soon pusher (fun () ->
 	let bytes_sent = Core.Unix.sendto socket ~buf ~pos:0 ~len:packet_size ~mode:[] ~addr in
 	if bytes_sent < packet_size then
 	  failwithf "Failed to send %d bytes to %s (%d bytes short)"
-	    bytes_sent ip (String.length buf - bytes_sent) ()));
+	    bytes_sent ip (Bytes.length buf - bytes_sent) ()));
     pusher.Pusher_state.seq <- pusher.Pusher_state.seq + (List.length stripss))
 
 let setup_refresh_loop_for_non_async read_fd =
@@ -277,12 +291,12 @@ let setup_refresh_loop_for_non_async read_fd =
 type send_updates_t = Core.Unix.File_descr.t
 
 let send_updates _send_updates_t =
-  (* TODO: go boom if this is called from a non-async thread *)
-  send_pixels_to_pushers ()
+  send_pixels_to_pushers ();
+  return ()
 
 let send_updates_from_non_async_thread fd =
   (* TODO: go boom if this is called from an async thread *)
-  let buf = "r" in
+  let buf = Bytes.of_string "r" in
   if Core.Unix.write fd ~buf ~pos:0 ~len:1 <> 1 then
     failwithf "couldn't write one char to update fd" ()
 
@@ -304,12 +318,11 @@ let get_strips_as_map () =
 let start_discovery_listener () =
   printf "*** Starting Pixel Pusher listener on port %d...\n%!" discovery_port;
   let addr = `Inet (Unix.Inet_addr.bind_any, discovery_port) in
-  Async_extra.Udp.bind addr
-  >>= fun socket ->
-  let fd = Async_extra.Import.Socket.fd socket in
-  Async_extra.Udp.recvfrom_loop fd
+  let socket = Async_udp.bind addr in
+  let fd = Socket.fd socket in
+  Async_udp.recvfrom_loop fd
     (fun buf addr ->
-      let addr_s = Async_extra.Import.Socket.Address.Inet.to_string addr in
+      let addr_s = Socket.Address.Inet.to_string addr in
       let beacon = Iobuf.to_string buf |> Beacon.of_wire in
       let key = beacon.Beacon.ip_address in
       let my_port = beacon.Beacon.my_port in
@@ -339,6 +352,11 @@ let start_discovery_listener () =
 let start () =
   let read_fd, write_fd = Core.Unix.pipe () in
   don't_wait_for (setup_refresh_loop_for_non_async read_fd);
-  don't_wait_for (start_discovery_listener ());
+  don't_wait_for (
+    start_discovery_listener () >>= fun loop_result ->
+    match loop_result with
+    | Async_udp.Loop_result.Stopped
+    | Async_udp.Loop_result.Closed ->
+      return ());
   Clock.every (sec 1.) Pusher_state.drop_missing_pushers;
   return write_fd

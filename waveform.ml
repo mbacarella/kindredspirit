@@ -20,3 +20,8 @@ let start ~sound_dev =
     loop ()
   in
   loop ()
+(*
+let%test_unit _ =
+  failwithf "unit test failed!" ()
+;;
+*)

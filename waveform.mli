@@ -1,5 +1,4 @@
 open Core
-open Async
 
 val pcm_data : int Array.t
 val index : int ref

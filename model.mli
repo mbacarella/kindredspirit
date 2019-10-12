@@ -1,5 +1,5 @@
-open Core
-open Async
+open! Core
+open! Async
 
 module Virtual_strip : sig
   type t =

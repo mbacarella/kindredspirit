@@ -2,11 +2,11 @@ open Core
 open Async
 
 let beat = ref 0.
-let exe = "./beat_detection_helper.native"
+let exe = "./beat_detection_helper.exe"
 
 let spectro = Array.create ~len:20 [||]
 let index = ref 0
-  
+
 let rec reader_loop ~reader ~err_reader =
   Reader.read_line reader >>= function
     | `Eof ->

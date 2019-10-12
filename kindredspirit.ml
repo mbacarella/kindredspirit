@@ -84,7 +84,7 @@ module Fps = struct
     index := (succ !index) mod Array.length times
   let calc () =
     let cutoff = Time.sub (Time.now ()) (sec 1.) in
-    let times = Array.to_list times |> List.filter ~f:(Time.(<) cutoff) |> List.sort ~cmp:Time.compare in
+    let times = Array.to_list times |> List.filter ~f:(Time.(<) cutoff) |> List.sort ~compare:Time.compare in
     max_delay :=
       begin match times with
       | [] | [_] -> epsilon
@@ -179,7 +179,7 @@ module Pixel_pusher_status = struct
     let expected_controllers = model.Model.controller_ids in
     let seen_controllers =
       List.fold_left (Pixel_pusher.get_controllers ()) ~init:Int.Map.empty ~f:(fun map c ->
-        Map.add map ~key:c.Controller_report.controller_id ~data:c)
+        Map.set map ~key:c.Controller_report.controller_id ~data:c)
     in
     let box_width = 15. in
     let box_height = 15. in
@@ -352,14 +352,14 @@ let start_watchdog_muter () =
   let len = String.length buf in
   Clock.every (sec 1.) (fun () ->
     let bytes_sent =
-      Core.Unix.sendto socket ~buf ~pos:0
+      Core.Unix.sendto socket ~buf:(Bytes.of_string buf) ~pos:0
         ~len:(String.length buf) ~mode:[] ~addr
     in
     if bytes_sent <> len then
       failwithf "Failed to send %d bytes to %s (%d bytes short)"
         bytes_sent ip (len - bytes_sent) ());
   printf "*** Watchdog muter initialized\n"
-    
+
 let main ~config =
   start_watchdog_muter ();
   Clock.every (sec 1.) (fun () -> Fps.calc ());
@@ -375,14 +375,20 @@ let main ~config =
 
 let () =
   let cmd =
+    let open Command.Let_syntax in
     Command.async ~summary:title
-      Command.Spec.(empty
-                    +> flag "-test-animations" no_arg ~doc:"test individual strips for signal/power"
-                    +> anon ("config-path" %: string))
-      (fun test_animations config_path () ->
-	if test_animations then Animation.mode := `test;
-        Reader.file_contents config_path >>= fun s ->
-        let config = Sexp.of_string s |> Config.t_of_sexp in
-        main ~config)
+      [%map_open
+       let test_animations =
+         flag "test-animations" no_arg
+           ~doc:"test individual strips for signal/power"
+       and  config_path =
+         flag "-config-file" (required string) ~doc:"PATH to config file"
+       in
+       fun () ->
+         if test_animations then Animation.mode := `test;
+         Reader.file_contents config_path >>= fun s ->
+         let config = Sexp.of_string s |> Config.t_of_sexp in
+         main ~config
+      ]
   in
   Command.run cmd

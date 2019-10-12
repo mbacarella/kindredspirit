@@ -149,14 +149,18 @@ let gen_ymap virtual_pixels =
   let y_map =
     Map.to_alist map1 |> List.fold_left ~init:Map.Poly.empty ~f:(fun map (key, vps) ->
       let data =
-        Array.of_list (List.sort vps ~cmp:(fun a b ->
+        Array.of_list (List.sort vps ~compare:(fun a b ->
           Float.compare
             (Virtual_pixel.coord a |> Coordinate.x)
             (Virtual_pixel.coord b |> Coordinate.x)))
       in
-      Map.add map ~key ~data)
+      Map.set map ~key ~data)
   in
-  let y_range = Map.keys y_map |> List.sort ~cmp:Int.compare |> Array.of_list in
+  let y_range =
+    Map.keys y_map
+    |> List.sort ~compare:Int.compare
+    |> Array.of_list
+  in
   let min_y, max_y = y_range.(0), y_range.(Array.length y_range-1) in
   assert (min_y < (max_y+1));
   y_map, y_range, max_y

@@ -1,5 +1,3 @@
-open Core
-
 type t =
   { controller_id : int
   ; strip_id : int
