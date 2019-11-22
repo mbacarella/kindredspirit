@@ -1,5 +1,5 @@
 open Core
-  
+
 type ('a, 'b, 'c, 'd) t =
     { stream : ('a, 'b, 'c, 'd) Portaudio.stream
     ; num_samples_per_read : int }
@@ -16,7 +16,7 @@ let init ~hz ~num_samples_per_read ~sound_dev =
   match
     List.find (List.range 0 num_devices) ~f:(fun device_no ->
       let device_info = Portaudio.get_device_info device_no in
-      device_info.Portaudio.d_name = sound_dev)
+      String.(=) device_info.Portaudio.d_name sound_dev)
   with
   | None ->
     eprintf "*** Couldn't find device.  List of available devices:\n%!";

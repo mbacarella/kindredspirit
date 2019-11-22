@@ -30,7 +30,7 @@ module Spectrogram = struct
   let update dft =
     let dft_length = Bigarray.Array1.dim dft in
     for i = 0 to dft_length-1; do
-      if !max_y < dft.{i} then max_y := dft.{i}
+      if Float.(<) !max_y dft.{i} then max_y := dft.{i}
     done;
     let hist = get_array () in
     let freq_scale =
@@ -40,7 +40,7 @@ module Spectrogram = struct
     Array.fill hist ~pos:0 ~len:(Array.length hist) (Float.Set.empty);
     for i = 0 to dft_length-1; do
       let freq = min max_freq (f2i (freq_scale *. (i2f i))) in
-      let power = (max dft.{i} 0.) /. !max_y in
+      let power = (Float.max dft.{i} 0.) /. !max_y in
       let index = freq_to_band.(freq) in
       hist.(index) <- Set.add hist.(index) power
     done
@@ -81,4 +81,4 @@ let main ~sound_dev =
   loop ()
 
 let () =
-  main ~sound_dev:Sys.argv.(1)
+  main ~sound_dev:(Sys.get_argv ()).(1)

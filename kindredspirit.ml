@@ -53,7 +53,10 @@ module List_pane = struct
     let x = 0. in
     List.findi (Animation.all ()) ~f:(fun i _a ->
       let y = height *. (Float.of_int i) in
-      !mouse_x >= x && !mouse_x < width && !mouse_y >= y && !mouse_y < y +. height)
+      Float.(>=) !mouse_x x
+      && Float.(<) !mouse_x width
+      && Float.(>=) !mouse_y y
+      && Float.(<) !mouse_y (y +. height))
   let display config =
     let display_height = Config.display_height config in
     GlDraw.color (0.1, 0.1, 0.1);
@@ -66,7 +69,7 @@ module List_pane = struct
       match hovered_a with
 	| None -> text ()
 	| Some (_, a') ->
-	  if a'.Animation.name = a.Animation.name then begin
+	  if String.(=) a'.Animation.name a.Animation.name then begin
 	    GlDraw.color (0.0, 1.0, 0.0);
 	    GlDraw.rect (0.0, y) (width, y +. height)
 	  end;
@@ -312,9 +315,9 @@ let mouse_click_event ~button ~state ~x ~y =
 let gl_main config model send_updates_t =
   let display_width = Config.display_width config in
   let display_height = Config.display_height config in
-  let _ = Glut.init ~argv:Sys.argv in
+  let _ : string array = Glut.init ~argv:(Sys.get_argv ()) in
   Glut.initDisplayMode ~depth:true ~double_buffer:true ();
-  let _ = Glut.createWindow ~title in
+  let _ : int = Glut.createWindow ~title in
 
   Glut.setCursor Glut.CURSOR_LEFT_ARROW;
 

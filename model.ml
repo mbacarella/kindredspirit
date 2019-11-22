@@ -170,7 +170,7 @@ let load path =
   let virtual_strips =
     List.filter_map lines ~f:(fun line ->
       let line = String.strip line in
-      if line = "" || line.[0] = '#' then None
+      if String.(=) line "" || Char.(=) line.[0] '#' then None
       else
 	match String.split ~on:'|' line with
 	  | controller_and_strip_id :: points :: [] ->
@@ -209,8 +209,8 @@ let load path =
   let limits f =
     let first = List.hd_exn virtual_pixels in
     List.fold_left virtual_pixels ~init:(f first, f first) ~f:(fun (min, max) vp ->
-      if f vp < min then (f vp, max)
-      else if f vp > max then (min, f vp)
+      if Float.(<) (f vp) min then (f vp, max)
+      else if Float.(>) (f vp) max then (min, f vp)
       else (min, max))
   in
   let x_limits = limits (Fn.compose Coordinate.x Virtual_pixel.coord) in

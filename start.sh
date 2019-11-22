@@ -13,6 +13,6 @@ else
 fi
 
 echo "*** Now starting $EXE..."
-~/stop-dhcp.sh
+#~/stop-dhcp.sh
 #./build.sh &&
- ./kindredspirit.native configs/thinkpad_sl410.sexp
+dune exec ./kindredspirit.exe -- -config-file configs/thinkpad_sl410.sexp

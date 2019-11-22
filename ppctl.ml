@@ -13,10 +13,12 @@ let iter_pixels_set_color f =
     Pixel_pusher.Strip.set_pixel strip ~color:(f ()) ~index)
 
 let pp_basic f =
-  Pixel_pusher.start () >>= fun uph ->
+  Pixel_pusher.start ()
+  >>= fun _uph ->
   let rec loop () =
     f ();
-    Pixel_pusher.send_updates uph;
+    Pixel_pusher.send_updates ()
+    >>= fun () ->
     Clock.after (sec 0.02) >>= loop
   in
   loop ()
@@ -24,22 +26,19 @@ let pp_basic f =
 module Set = struct
   module All = struct
     let set_all ~color =
-      ignore (Color.of_string color); (* fail early in case this color is invalid *)
+      let _ : Color.t = Color.of_string color in (* fail early in case this color is invalid *)
       pp_basic (fun () -> iter_pixels_set_color (fun () -> Color.of_string color))
 
     let cmd =
+      let open Command.Let_syntax in
       Command.async ~summary:"set all LEDs on all strips"
-	Command.Spec.(empty +> anon ("color" %: string))
-	(fun color () -> set_all ~color)
+        [%map_open
+          let color = flag "color" (required string) ~doc:"color to set" in
+          fun () -> set_all ~color]
   end
-  let cmd =
-    Command.group ~summary:"set strip(s) to a color"
-      [ "all", All.cmd ]
+  let cmd = Command.group ~summary:"set strip(s) to a color" [ "all", All.cmd ]
 end
 
 let () =
-  let cmd =
-    Command.group ~summary:"Pixel Pusher control util"
-      [ "set", Set.cmd ]
-  in
+  let cmd = Command.group ~summary:"Pixel Pusher control util" [ "set", Set.cmd ] in
   Command.run cmd

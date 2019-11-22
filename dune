@@ -1,4 +1,4 @@
 (executables
-  (names kindredspirit beat_detection_helper)
-  (libraries async async_udp bitstring core fftw3 lablgl lablgl.glut portaudio)
-  (preprocess (pps ppx_jane bitstring.ppx)))
+  (names kindredspirit beat_detection_helper ppctl)
+  (libraries async core fftw3 lablgl lablgl.glut pixel_pusher portaudio)
+  (preprocess (pps ppx_jane)))

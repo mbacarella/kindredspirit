@@ -17,6 +17,7 @@ let create ~x ~y ~width ~height =
 
 (* Adapted from https://gist.github.com/mjackson/5311256 *)
 let hue_to_rgb ~p ~q ~t =
+  let (<) = Float.(<) and (>) = Float.(>) in
   let t = if t < 0. then t +. 1. else t in
   let t = if t > 1. then t -. 1. else t in
   if t < 1. /. 6. then p +. (q -. p) *. 6. *. t
@@ -25,6 +26,7 @@ let hue_to_rgb ~p ~q ~t =
   else p
 
 let hsl_to_rgb ~h ~l ~s =
+  let (<) = Float.(<) and (=) = Float.(=) in
   if s = 0. then (l, l, l) (* achromatic *)
   else
     let q = if l < 0.5 then l *. (1. +. s) else l +. s -. l *. s in
@@ -34,6 +36,7 @@ let hsl_to_rgb ~h ~l ~s =
     hue_to_rgb ~p ~q ~t:(h -. 1. /. 3.)
 
 let color_at_xy_gl t ~x ~y =
+  let (<) = Float.(<) and (>=) = Float.(>) in
   if x < t.x || x >= t.x +. t.width || y < t.y || y >= t.y +. t.height then None
   else
     let h = (x -. t.x) /. t.width in
@@ -156,7 +159,7 @@ let rgb_to_coord t c =
   hsl_iter (fun ~i:_ ~h ~s ~l ->
     let dist' = dist (hsl_to_rgb ~h ~s ~l) in
     let (_, _, dist) = !best in
-    if dist' < dist then
+    if Float.(<) dist' dist then
       let x = t.x +. t.width *. h in
       let y = t.y +. t.height *. l in
       best := (x, y, dist'));

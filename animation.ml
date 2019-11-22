@@ -10,7 +10,7 @@ type t =
 let dj = { Coordinate.x=140.; y=30.; z=(-40.) }
 (*let subs = { Coordinate.x=140.; y=150.; z=(-40.) }*)
 let nose = { Coordinate.x=45.; y=130.; z=0. }
-  
+
 let init t model =
   { t with model = Some (Model.dup model) }
 
@@ -74,7 +74,7 @@ module Sticks_rnd = struct
     ; update }
 end
 *)
-    
+
 module Rain = struct
   let ticks = ref 0
   let height = 140.
@@ -89,14 +89,15 @@ module Rain = struct
         begin
 	  let coord = vp.Virtual_pixel.coord in
 	  let dist = coord.Coordinate.y -. pos in
-	  if dist < 0. then Color.shade vp.Virtual_pixel.color ~factor:0.05 
+    let (<) = Float.(<) in
+	  if dist < 0. then Color.shade vp.Virtual_pixel.color ~factor:0.05
 	  else if dist < 1. then color
 	  else Color.shade ~factor:((dist /. height) *. 10.) color
         end);
     incr ticks
 
   let anim = { empty with name = "rain"; update = update ~rnd:false; primary_color = Some (Color.of_hex_int 0x660E6F) }
-  let anim_rnd = { empty with name = "rain-rnd"; update = update ~rnd:true } 
+  let anim_rnd = { empty with name = "rain-rnd"; update = update ~rnd:true }
 end
 
 module Split = struct
@@ -118,7 +119,7 @@ module Solid_glow = struct
   let update ~rnd t =
     let phase =
       let phase = Float.of_int (!ticks mod 200) in
-      if phase > 100. then 100. -. (phase -. 100.)
+      if Float.(>) phase 100. then 100. -. (phase -. 100.)
       else phase
     in
     if rnd then begin
@@ -147,7 +148,7 @@ module Solid_beat = struct
   let update t =
     let beat =
       let beat = !Beat_detection.beat in
-      if beat < 0.3 then 0.
+      if Float.(<) beat 0.3 then 0.
       else beat
     in
     let color = Option.value_exn t.primary_color in
@@ -198,16 +199,16 @@ module Waveform = struct
         else Color.black
       in
       color)
-      
+
   let avg_of_indices a ii =
     (List.map ii ~f:(fun i -> snd a.(i)) |> List.fold_left ~init:0. ~f:(+.))
     /. (List.length ii |> Float.of_int)
-      
+
   let update_eq t =
     update t (fun ~power ~spectro ->
       let shade =
         let power = Float.min 32768. (Float.of_int (power ())) in
-        assert (power >= 0.);
+        assert (Float.(>=) power 0.);
         Color.shade ~factor:(1. -. (power /. 32768.))
       in
       let color =
@@ -221,11 +222,11 @@ module Waveform = struct
         ;       b = Float.to_int (highs *. 255.) }
       in
       shade color)
-      
+
   let anim_rgb = { empty with name = "waveform-rgb"; update=update_rgb }
   let anim_eq = { empty with name = "waveform-eq"; update=update_eq }
 end
-  
+
 (*
 module Subwoofer = struct
   let max_beat = ref 0.
@@ -338,7 +339,7 @@ module Scan_dj = struct
     iter_pixels t ~f:(fun _ vp ->
       vp.Virtual_pixel.color <- Option.value_exn
         (let dist = Coordinate.dist vp.Virtual_pixel.coord dj in
-         if dist >= pos && dist < pos +. 40. then c
+         if Float.(>=) dist pos && Float.(<) dist (pos +. 40.) then c
          else Some (Color.shade ~factor:0.05 vp.Virtual_pixel.color)));
     ticks := (succ !ticks) mod size;
     if rnd && !ticks = 0 then color := Color.rand ()
@@ -385,7 +386,7 @@ module Slugs = struct
         if vp.Virtual_pixel.pixel_id = id then !color
         else Color.shade ~factor:0.025 vp.Virtual_pixel.color);
     ticks := (succ !ticks) mod 1000
-    
+
 
   let anim =
     { empty with name="slugs"; primary_color = Some Color.green; update=update ~rnd:false }
