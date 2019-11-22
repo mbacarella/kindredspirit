@@ -13,11 +13,9 @@ bug-reports: "Michael Bacarella <michael.bacarella@gmail.com>"
 build: ["dune" "build" "-p" name "-j" jobs]
 depends: [
   "async"
-  "async_udp"
   "core"
   "fftw3"
   "lablgl"
-  "bitstring"
   "fftw3"
   "portaudio"
 ]
